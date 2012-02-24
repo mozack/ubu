@@ -14,7 +14,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
-<repositories>
+  <repositories>
     <repository>
       <id>UBU repository</id>
       <url>http://lbg.unc.edu/~lmose/maven-repo</url>
