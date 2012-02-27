@@ -18,15 +18,18 @@ import org.apache.commons.collections.MultiMap;
  * This class can be used to read a bed file and cache Isoforms information.
  * Isoforms can be retrieved by chromosome and genome position.
  * 
- * TODO(lmose): This class could use better naming throughout.
+ * TODO(lmose): Factor out reading of BED file.
  * @author lmose
  */
-@Deprecated
-public class BedReader {
+public class IsoformIndex {
     
     private int readOffset;
     
-    private Map<String, MultiHashMap> idxMap = new HashMap<String, MultiHashMap>();
+//    private Map<String, MultiHashMap> idxMap = new HashMap<String, MultiHashMap>();
+    
+    private String currentIndexedChromosome = "unset";
+    private MultiHashMap indexMap;
+    private Map<String, List<Isoform>> chromosomeIsoformsMap = new HashMap<String, List<Isoform>>();
     
     private Map<String, Isoform> isoformMap = new HashMap<String, Isoform>();
     
@@ -75,12 +78,12 @@ public class BedReader {
             String exonLengths = fields[10];
             String exonOffsets = fields[11];
             
-            int startIdx = start - (start % readOffset);
-            int endIdx   = end + (readOffset - (end % readOffset));
-            
-            for (int idx = startIdx; idx <= endIdx; idx += readOffset) {
-                getCoordinateMap(chromosome).put(idx, isoformId);
-            }
+//            int startIdx = start - (start % readOffset);
+//            int endIdx   = end + (readOffset - (end % readOffset));
+//            
+//            for (int idx = startIdx; idx <= endIdx; idx += readOffset) {
+//                getCoordinateMap(chromosome).put(idx, isoformId);
+//            }
             
             if ((cnt++ % 10000) == 0) {
                 //break;
@@ -89,6 +92,13 @@ public class BedReader {
             
             Isoform isoform = new Isoform(isoformId, new Coordinate(start, end), strand, getExonCoordinates(start, exonLengths, exonOffsets));
             isoformMap.put(isoformId, isoform);
+            
+            List<Isoform> isoforms = chromosomeIsoformsMap.get(chromosome);
+            if (isoforms == null) {
+            	isoforms = new ArrayList<Isoform>();
+            	chromosomeIsoformsMap.put(chromosome, isoforms);
+            }
+            isoforms.add(isoform);
             
             line = reader.readLine();
         }
@@ -101,6 +111,35 @@ public class BedReader {
         return Collections.unmodifiableCollection(isoformMap.values());
     }
     
+    private MultiMap getIndexMap(String chromosome) {
+    	if (!currentIndexedChromosome.equals(chromosome)) {
+    		System.out.println("Indexing isoforms for: " + chromosome);
+    		currentIndexedChromosome = chromosome;
+    		
+    		indexMap = new MultiHashMap();
+    		
+    		List<Isoform> isoformsInChromosome = chromosomeIsoformsMap.get(chromosome); 
+    		
+    		if (isoformsInChromosome != null) {
+	    		for (Isoform isoform : isoformsInChromosome) {
+	    		
+	    			int start = isoform.getGenomicCoordinate().getStart();
+	    			int end = isoform.getGenomicCoordinate().getStop();
+	    			
+		            int startIdx = start - (start % readOffset);
+		            int endIdx   = end + (readOffset - (end % readOffset));
+	    			
+		            for (int idx = startIdx; idx <= endIdx; idx += readOffset) {
+		                indexMap.put(idx, isoform.getIsoformId());
+		            }
+	    		}
+    		}
+    	}
+    	
+    	return indexMap;
+    }
+    
+    /*
     private MultiMap getCoordinateMap(String chromosome) {
         MultiMap map = idxMap.get(chromosome);
         
@@ -111,11 +150,13 @@ public class BedReader {
         
         return map;
     }
+    */
     
     private Collection<String> getPotentialIsoformsExact(String chromosome, int genomeStart) {
         Collection<String> isoforms = Collections.EMPTY_LIST;
         
-        MultiMap map = idxMap.get(chromosome);
+//        MultiMap map = idxMap.get(chromosome);
+        MultiMap map = getIndexMap(chromosome);
         if (map != null) {
             Collection<String> isoformCol = (Collection<String>) map.get(genomeStart);
             if (isoformCol != null) {
@@ -150,7 +191,7 @@ public class BedReader {
 
         long s = System.currentTimeMillis();
         
-        BedReader rdr = new BedReader();
+        IsoformIndex rdr = new IsoformIndex();
         
         rdr.buildReadToIsoformIndex("/home/lisle/data/coord_convert/ucsc_known_gene_bed.txt", 200);
         

@@ -10,9 +10,9 @@ import java.util.Date;
 public class GenomeToTranscriptome {
 
     public static void main(String[] args) throws Exception {
-//        run(args);
+        run(args);
         
-        
+/*        
         String argz = 
             "--bed /home/lisle/data/coord_convert/ucsc_known_gene_bed.txt " +
             "--dupes /home/lisle/data/coord_convert/dupes3.txt " +
@@ -20,20 +20,21 @@ public class GenomeToTranscriptome {
             "--order /home/lisle/data/coord_convert/hg19_M_ref.transcripts.fa " +
             "--xgtags " +
             "--reverse " +
+            "--in /home/lisle/gtof/conv/really_small_sorted_by_ref_and_read.bam " +
+            "--out /home/lisle/gtof/conv/transcriptome_lazy.bam "
 //            "--in /home/lisle/data/coord_convert/sorted_tiny.sam " +
 //            "--out /home/lisle/data/coord_convert/tiny_isoform2.sam "
 //          "--in /home/lisle/data/coord_convert/testing2/reverse.sam " +
 //          "--out /home/lisle/data/coord_convert/testing2/converted_reverse2.bam "
-            "--in /home/lisle/data/coord_convert/testing4/gen1.sam " +
-            "--out /home/lisle/data/coord_convert/testing4/converted_gen1.sam"
+//            "--in /home/lisle/data/coord_convert/testing4/gen1.sam " +
+//            "--out /home/lisle/data/coord_convert/testing4/converted_gen1.sam"
 //          "--in /home/lisle/data/coord_convert/testing3/sorted_genomic.sam " +
 //          "--out /home/lisle/data/coord_convert/testing3/converted_sorted_genomic.bam "
-
             ;
         
-        
         run(argz.split(" "));
-
+*/
+        
     }
     
     public static void run(String[] args) throws Exception {
@@ -62,13 +63,13 @@ public class GenomeToTranscriptome {
             
             // Build read index from bed file
             System.out.println("Building read index");
-            BedReader bedReader = new BedReader();
-            bedReader.buildReadToIsoformIndex(options.getBedFile(), options.getReadOffset());
+            IsoformIndex isoformIndex = new IsoformIndex();
+            isoformIndex.buildReadToIsoformIndex(options.getBedFile(), options.getReadOffset());
             
             // Instantiate converter and run
             System.out.println("Converting");
             String dupeFile = options.hasDuplicatesFile() ? options.getDuplicatesFile() : null;
-            GenomeToTranscriptomeConverter converter = new GenomeToTranscriptomeConverter(bedReader, isoformOrderLoader, dupeFile);
+            GenomeToTranscriptomeConverter converter = new GenomeToTranscriptomeConverter(isoformIndex, isoformOrderLoader, dupeFile);
             converter.setPositiveStrandReportingOnly(options.isPositiveStrandReportingOnly());
             converter.setShouldOutputXgTags(options.shouldOutputXgTags());
             

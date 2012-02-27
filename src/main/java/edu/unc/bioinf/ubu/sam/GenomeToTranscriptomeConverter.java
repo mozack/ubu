@@ -27,7 +27,7 @@ import net.sf.samtools.SAMSequenceRecord;
  */
 public class GenomeToTranscriptomeConverter {
     
-    private BedReader bedReader;
+    private IsoformIndex isoformIndex;
     private boolean isPositiveStrandReportingOnly = true;
     private boolean shouldOutputXgTags = false;
     private IsoformOrderLoader isoformOrderLoader;
@@ -48,8 +48,8 @@ public class GenomeToTranscriptomeConverter {
     
     private int totalPairsOutput = 0;
     
-    public GenomeToTranscriptomeConverter(BedReader bedReader, IsoformOrderLoader isoformOrderLoader, String dupeFile) {
-        this.bedReader = bedReader;
+    public GenomeToTranscriptomeConverter(IsoformIndex isoformIndex, IsoformOrderLoader isoformOrderLoader, String dupeFile) {
+        this.isoformIndex = isoformIndex;
         this.isoformOrderLoader = isoformOrderLoader;
         this.dupeFile = dupeFile;
     }
@@ -69,7 +69,7 @@ public class GenomeToTranscriptomeConverter {
      * Returns a list of all Isoforms available sorted by id.
      */
     private List<Isoform> getSortedIsoforms() {
-        List<Isoform> isoforms = new ArrayList<Isoform>(bedReader.getAllIsoforms());
+        List<Isoform> isoforms = new ArrayList<Isoform>(isoformIndex.getAllIsoforms());
         
         // Sort the isoforms if an isoformOrderLoader was specified
         if (isoformOrderLoader != null) {
@@ -89,10 +89,10 @@ public class GenomeToTranscriptomeConverter {
      */
     public List<Isoform> getPotentialIsoforms(String chromosome, int genomicStartPos, int genomicEndPos) {
         List<Isoform> potentialIsoforms = new ArrayList<Isoform>();
-        Collection<String> potentials = bedReader.getPotentialIsoforms(chromosome, genomicStartPos);
+        Collection<String> potentials = isoformIndex.getPotentialIsoforms(chromosome, genomicStartPos);
         
         for (String isoformId : potentials) {
-            Isoform isoform = bedReader.getIsoform(isoformId);
+            Isoform isoform = isoformIndex.getIsoform(isoformId);
             if (isoform.containsWithinGenomicRange(genomicStartPos, genomicEndPos)) {
                 potentialIsoforms.add(isoform);
             }
@@ -481,28 +481,28 @@ public class GenomeToTranscriptomeConverter {
     }
     
     public static void main(String[] args) throws Exception {
-        System.out.println("Starting.");
-        long s = System.currentTimeMillis();
-        
-        System.out.println("Parsing arguments");
-        Args argz = new Args(args);
-        
-        System.out.println("Determining isoform header order");
-        IsoformOrderLoader isoformOrderLoader = new IsoformOrderLoader();
-        isoformOrderLoader.loadOrdering(argz.getOrderFastaFile());
-        
-        System.out.println("Building read index");
-        BedReader bedReader = new BedReader();
-        bedReader.buildReadToIsoformIndex(argz.getBedFile(), argz.getReadOffset());
-        
-        System.out.println("Converting");
-
-        String dupeFile = argz.getDupeFile();
-        GenomeToTranscriptomeConverter converter = new GenomeToTranscriptomeConverter(bedReader, isoformOrderLoader, dupeFile);
-        converter.convertFile(argz.getInputAlignmentFile(), argz.getOutputAlignmentFile());
-                
-        long e = System.currentTimeMillis();
-        
-        System.out.println("Elapsed: " + (e-s)/1000);
+//        System.out.println("Starting.");
+//        long s = System.currentTimeMillis();
+//        
+//        System.out.println("Parsing arguments");
+//        Args argz = new Args(args);
+//        
+//        System.out.println("Determining isoform header order");
+//        IsoformOrderLoader isoformOrderLoader = new IsoformOrderLoader();
+//        isoformOrderLoader.loadOrdering(argz.getOrderFastaFile());
+//        
+//        System.out.println("Building read index");
+//        BedReader bedReader = new BedReader();
+//        bedReader.buildReadToIsoformIndex(argz.getBedFile(), argz.getReadOffset());
+//        
+//        System.out.println("Converting");
+//
+//        String dupeFile = argz.getDupeFile();
+//        GenomeToTranscriptomeConverter converter = new GenomeToTranscriptomeConverter(bedReader, isoformOrderLoader, dupeFile);
+//        converter.convertFile(argz.getInputAlignmentFile(), argz.getOutputAlignmentFile());
+//                
+//        long e = System.currentTimeMillis();
+//        
+//        System.out.println("Elapsed: " + (e-s)/1000);
     }
 }
