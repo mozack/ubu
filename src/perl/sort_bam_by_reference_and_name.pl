@@ -26,7 +26,7 @@ print "Starting " . scalar(localtime) . "\n";
 #Create Temp dir: <pid>_<hostname>_<time>
 #my $tdir = "/home/lisle/gtof/" . "$$" . "_" . hostname . "_" . time;
 
-my $tdir = $temp_dir . "$$" . "_" . hostname . "_" . time;
+my $tdir = $temp_dir . "/" . "$$" . "_" . hostname . "_" . time;
 
 print "Using temp dir: $tdir\n";
 
