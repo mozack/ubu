@@ -196,19 +196,19 @@ public class SamFileDiff {
 	}
 	
 	public static void main(String[] args) {
-//		String in1  = args[0];
-//		String in2  = args[1];
-//		String out1 = args[2];
-//		String out2 = args[3];
+		String in1  = args[0];
+		String in2  = args[1];
+		String out1 = args[2];
+		String out2 = args[3];
 		
 //		/home/lisle/code/ubu/src/test/java/edu/unc/bioinf/ubu/sam/testdata/test_output
 		
 //		/home/lisle/data/sam_diff/test2
 
-		String in1  = "/home/lisle/data/sam_diff/test2/1.sam";
-		String in2  = "/home/lisle/data/sam_diff/test2/2.sam";
-		String out1 = "/home/lisle/data/sam_diff/test2/out1.bam";
-		String out2 = "/home/lisle/data/sam_diff/test2/out2.bam";
+//		String in1  = "/home/lisle/data/sam_diff/test2/1.sam";
+//		String in2  = "/home/lisle/data/sam_diff/test2/2.sam";
+//		String out1 = "/home/lisle/data/sam_diff/test2/out1.bam";
+//		String out2 = "/home/lisle/data/sam_diff/test2/out2.bam";
 		
 //		String in1  = "/home/lisle/code/ubu/src/test/java/edu/unc/bioinf/ubu/sam/testdata/test_output/1.sam";
 //		String in2  = "/home/lisle/code/ubu/src/test/java/edu/unc/bioinf/ubu/sam/testdata/test_output/2.sam";
