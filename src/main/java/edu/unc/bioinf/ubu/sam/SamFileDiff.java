@@ -12,6 +12,8 @@ import net.sf.samtools.SAMRecord;
 
 /**
  * Diffs 2 SAM (or BAM) files.
+ * The input files must be sorted by read.
+ * Handles multi-mapped reads.
  * 
  * @author lmose
  */
