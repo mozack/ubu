@@ -52,26 +52,36 @@ public class SamReadPairReader implements Iterable<ReadPair> {
         List<ReadPair> readPairs = new ArrayList<ReadPair>();
         
         // Map of mate info to read1
-        Map<String, SAMRecord> mate1Map = new HashMap<String, SAMRecord>();
+        Map<String, List<SAMRecord>> mate1Map = new HashMap<String, List<SAMRecord>>();
         
         for (SAMRecord read : reads1) {
             String key = read.getMateReferenceName() + "_" + read.getMateAlignmentStart();
-            mate1Map.put(key, read);
+            List<SAMRecord> readList = mate1Map.get(key);
             
+            if (readList == null) {
+            	readList = new ArrayList<SAMRecord>();
+            	mate1Map.put(key, readList);
+            }
+            
+            readList.add(read);
         }
         
         for (SAMRecord read2 : reads2) {
-            SAMRecord read1 = mate1Map.get(read2.getReferenceName() + "_" + read2.getAlignmentStart());
-            
-            if (read1 != null) {
-                if (read1.getAlignmentStart() > read2.getAlignmentStart()) {
-                    SAMRecord temp = read1;
-                    read1 = read2;
-                    read2 = temp;
-                }
-            
-                readPairs.add(new ReadPair(read1, read2));
-            }
+        	List<SAMRecord> readList = mate1Map.get(read2.getReferenceName() + "_" + read2.getAlignmentStart());
+        	
+        	if (readList != null) {
+        	
+	            for (SAMRecord read1 : readList) {
+		            
+	                if (read1.getAlignmentStart() > read2.getAlignmentStart()) {
+	                    SAMRecord temp = read1;
+	                    read1 = read2;
+	                    read2 = temp;
+	                }
+	            
+	                readPairs.add(new ReadPair(read1, read2));
+	            }
+        	}
         }
         
         return readPairs;
@@ -135,43 +145,6 @@ public class SamReadPairReader implements Iterable<ReadPair> {
         
         return pairReads(reads1, reads2);
     }
-
-
-    /*
-    private List<ReadPair> getReadPairs() {
-        
-        List<SAMRecord> reads1 = new ArrayList<SAMRecord>();
-        List<SAMRecord> reads2 = new ArrayList<SAMRecord>();
-        
-        // Get the list of records for the first read
-        SAMRecord read = getNextRead();
-        if (read != null) {
-            String readName = read.getReadName();
-            String baseName = getBaseName(read);
-            
-            while ((read != null) && (readName.equals(read.getReadName()))) {
-                reads1.add(read);
-                read = getNextRead();
-            }
-            
-            // Get the list of records for the second read
-            if ((read != null) && getBaseName(read).equals(baseName)) {
-                readName = read.getReadName();
-                while ((read != null) && (readName.equals(read.getReadName()))) {
-                    reads2.add(read);
-                    read = getNextRead();
-                }
-            }
-            
-            // Put the last read (which isn't part of this pair) back
-            if (read != null) {
-                unGetRead();
-            }
-        }
-        
-        return pairReads(reads1, reads2);
-    }
-*/
     
     private boolean hasMoreReads() {
         return cachedRead != null || iter.hasNext();
