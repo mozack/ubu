@@ -6,6 +6,8 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.commons.lang.StringUtils;
+
 import net.sf.samtools.SAMFileWriter;
 import net.sf.samtools.SAMFileWriterFactory;
 import net.sf.samtools.SAMRecord;
@@ -46,13 +48,15 @@ public class SamFileDiff {
         	List<SAMRecord> readList1 = getNextList1();
         	List<SAMRecord> readList2 = getNextList2();
         	        	
-        	int compare = readList1.get(0).getSAMString().compareTo(readList2.get(0).getSAMString());
+        	int compare = compareReadNames(readList1.get(0), readList2.get(0));
+//        	int compare = readList1.get(0).getSAMString().compareTo(readList2.get(0).getSAMString());
+        	
         	if (compare < 0) {
-        		addAlignments(out2, readList2);
-        		this.cachedReadList1 = readList1;
-        	} else if (compare > 0) {
         		addAlignments(out1, readList1);
         		this.cachedReadList2 = readList2;
+        	} else if (compare > 0) {
+        		addAlignments(out2, readList2);
+        		this.cachedReadList1 = readList1;
         	} else {
         		diffReadLists(readList1, readList2, out1, out2);
         	}
@@ -187,6 +191,29 @@ public class SamFileDiff {
         this.cachedRead2 = null;
 	}
 	
+	private int compareReadNames(SAMRecord read1, SAMRecord read2) {
+		int compare = 0;
+		
+		String[] name1 = read1.getReadName().split("[:/]");
+		String[] name2 = read2.getReadName().split("[:/]");
+		
+		int idx = 0;
+		while ((idx < name1.length) && (idx < name2.length) && (compare == 0)) {
+			if (StringUtils.isNumeric(name1[idx]) && StringUtils.isNumeric(name2[idx])) {
+				int field1 = Integer.parseInt(name1[idx]);
+				int field2 = Integer.parseInt(name2[idx]);
+				
+				compare = field1 - field2;
+			} else {
+				compare = name1[idx].compareTo(name2[idx]);
+			}
+			
+			idx++;
+		}
+		
+		return compare;
+	}
+	
 	static class SAMRecordComparator implements Comparator<SAMRecord> {
 
 		@Override
@@ -196,6 +223,13 @@ public class SamFileDiff {
 	}
 	
 	public static void main(String[] args) {
+//		String s = "UNC12-SN629_146:2:1101:2021:128357/1";
+//		String[] f = s.split("[:/]");
+//		
+//		for (String f1 : f) {
+//			System.out.println(f1);
+//		}
+		
 		String in1  = args[0];
 		String in2  = args[1];
 		String out1 = args[2];
