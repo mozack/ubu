@@ -46,11 +46,11 @@ public class SamFileDiff {
         	        	
         	int compare = readList1.get(0).getSAMString().compareTo(readList2.get(0).getSAMString());
         	if (compare < 0) {
-        		addAlignments(out1, readList1);
-        		this.cachedReadList2 = readList2;
-        	} else if (compare > 0) {
         		addAlignments(out2, readList2);
         		this.cachedReadList1 = readList1;
+        	} else if (compare > 0) {
+        		addAlignments(out1, readList1);
+        		this.cachedReadList2 = readList2;
         	} else {
         		diffReadLists(readList1, readList2, out1, out2);
         	}
@@ -194,15 +194,30 @@ public class SamFileDiff {
 	}
 	
 	public static void main(String[] args) {
-		String in1  = args[0];
-		String in2  = args[1];
-		String out1 = args[2];
-		String out2 = args[3];
+//		String in1  = args[0];
+//		String in2  = args[1];
+//		String out1 = args[2];
+//		String out2 = args[3];
+		
+//		/home/lisle/code/ubu/src/test/java/edu/unc/bioinf/ubu/sam/testdata/test_output
+		
+//		/home/lisle/data/sam_diff/test2
 
+		String in1  = "/home/lisle/data/sam_diff/test2/1.sam";
+		String in2  = "/home/lisle/data/sam_diff/test2/2.sam";
+		String out1 = "/home/lisle/data/sam_diff/test2/out1.bam";
+		String out2 = "/home/lisle/data/sam_diff/test2/out2.bam";
+		
+//		String in1  = "/home/lisle/code/ubu/src/test/java/edu/unc/bioinf/ubu/sam/testdata/test_output/1.sam";
+//		String in2  = "/home/lisle/code/ubu/src/test/java/edu/unc/bioinf/ubu/sam/testdata/test_output/2.sam";
+//		String out1 = "/home/lisle/code/ubu/src/test/java/edu/unc/bioinf/ubu/sam/testdata/test_output/out1.bam";
+//		String out2 = "/home/lisle/code/ubu/src/test/java/edu/unc/bioinf/ubu/sam/testdata/test_output/out2.bam";
+		
 //		String in1  = "/home/lisle/data/sam_diff/small/1.sam";
 //		String in2  = "/home/lisle/data/sam_diff/small/2.sam";
 //		String out1 = "/home/lisle/data/sam_diff/small/out1.sam";
 //		String out2 = "/home/lisle/data/sam_diff/small/out2.sam";
+
 
 		System.out.println("Input 1: " + in1);
 		System.out.println("Input 2: " + in2);
