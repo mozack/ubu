@@ -15,12 +15,12 @@ public class GenomeToTranscriptomeOptions {
     // Option flags
     private static final String BED_FILE    = "bed";
     private static final String READ_OFFSET = "offset";
-    private static final String DUPE_FILE = "dupes";
     private static final String INPUT_ALIGNMENT_FILE = "in";
     private static final String OUTPUT_ALIGNMENT_FILE = "out";
     private static final String ORDERING_FASTA = "order";
     private static final String REVERSE_STRAND_COORDS = "reverse";
     private static final String OUTPUT_XG_TAGS = "xgtags";
+    private static final String SINGLE_END = "single";    
     private static final String HELP = "help";
     
     private static final int DEFAULT_READ_OFFSET = 25;
@@ -36,9 +36,9 @@ public class GenomeToTranscriptomeOptions {
         parser.accepts(OUTPUT_ALIGNMENT_FILE, "Output alignment file").withRequiredArg().ofType(String.class);
         parser.accepts(READ_OFFSET, "Optional Offset size of read index (default 25)").withRequiredArg().ofType(Integer.class);
         parser.accepts(ORDERING_FASTA, "Optional FASTA file used to determine order of isoforms in BAM header (important for RSEM)").withRequiredArg().ofType(String.class);
-        parser.accepts(DUPE_FILE, "Optional output file containing duplication frequency").withRequiredArg().ofType(String.class);
-        parser.accepts(REVERSE_STRAND_COORDS, "Optional flag indicating that reverse strand coordinates should be reported (Experimental)");
+        parser.accepts(REVERSE_STRAND_COORDS, "Optional flag indicating that reverse strand coordinates should be reported");
         parser.accepts(OUTPUT_XG_TAGS, "Optional flag indicating that genomic coordinates should be output in a XG tag");
+        parser.accepts(SINGLE_END, "Optional flag indicating that reads need not be paired in the same transcript to be output (default is off)");
         parser.accepts(HELP, "Print this help message");
 
         try {
@@ -122,19 +122,15 @@ public class GenomeToTranscriptomeOptions {
         return options.hasArgument(ORDERING_FASTA);
     }
     
-    public boolean hasDuplicatesFile() {
-        return options.hasArgument(DUPE_FILE);
-    }
-    
-    public String getDuplicatesFile() {
-        return (String) options.valueOf(DUPE_FILE);
-    }
-    
     public boolean isPositiveStrandReportingOnly() {
         return !options.has(REVERSE_STRAND_COORDS);
     }
     
     public boolean shouldOutputXgTags() {
         return options.has(OUTPUT_XG_TAGS);
+    }
+    
+    public boolean isSingleEnd() {
+    	return options.has(SINGLE_END);
     }
 }

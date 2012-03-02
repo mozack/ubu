@@ -54,29 +54,29 @@ public class GenomeToTranscriptomeOptionsTest {
     @Test (groups = "unit")
     public void testAllParams() {
         parser.parseOptions(
-                "--bed bedfile --in infile --out outfile --offset 50 --dupes dupefile --order orderfile --reverse --xgtags".split(" "));
+                "--bed bedfile --in infile --out outfile --offset 50 --order orderfile --reverse --xgtags --single".split(" "));
             
         assertTrue(parser.isValid());
         validateBasicParams();
-        validateDupes();
         validateOrderFile();
         assertEquals(parser.getReadOffset(), 50);
         assertFalse(parser.isPositiveStrandReportingOnly());
         assertTrue(parser.shouldOutputXgTags());
+        assertTrue(parser.isSingleEnd());
     }
     
     @Test (groups = "unit")
     public void testInitialMapspliceParams() {
         parser.parseOptions(
-                "--bed bedfile --in infile --out outfile --dupes dupefile --order orderfile --xgtags".split(" "));
+                "--bed bedfile --in infile --out outfile --order orderfile --xgtags".split(" "));
 
         assertTrue(parser.isValid());
         validateBasicParams();
-        validateDupes();
         validateOrderFile();
         assertEquals(parser.getReadOffset(), 25);
         assertTrue(parser.isPositiveStrandReportingOnly());
         assertTrue(parser.shouldOutputXgTags());
+        assertFalse(parser.isSingleEnd());
     }
     
     @Test (groups = "unit")
@@ -92,11 +92,7 @@ public class GenomeToTranscriptomeOptionsTest {
         assertEquals(parser.getInputAlignmentFile(), "infile");
         assertEquals(parser.getOutputAlignmentFile(), "outfile");
     }
-    
-    private void validateDupes() {
-        assertEquals(parser.getDuplicatesFile(), "dupefile");
-    }
-    
+        
     private void validateOrderFile() {
         assertEquals(parser.getOrderingFastaFile(), "orderfile");
     }

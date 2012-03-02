@@ -1,6 +1,7 @@
 package edu.unc.bioinf.ubu.sam;
 
 import java.io.File;
+import java.io.IOException;
 
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
@@ -23,12 +24,17 @@ public class GenomeToTranscriptomeTest {
 	private static final String EXPECTED_OUTPUT = TESTDATA_DIR + "transcriptome.bam";
 
     @BeforeMethod (groups = "system")
-    void setUp() {
+    void setUp() throws IOException, InterruptedException {
     	File output = new File(OUTPUT);
     	output.delete();
     	
     	File dupes = new File(DUPES);
     	dupes.delete();
+    	
+    	String rmTestFiles = "rm " + OUTPUT_DIR + "*";
+    	System.out.println(rmTestFiles);
+    	Process p = Runtime.getRuntime().exec(rmTestFiles);
+    	p.waitFor();
     	
         File outputDir = new File(OUTPUT_DIR);
         outputDir.delete();
@@ -43,7 +49,6 @@ public class GenomeToTranscriptomeTest {
     public void testGenomeToTranscriptome() throws Exception {
         String argz = 
             "--bed " + BED +
-            " --dupes " + DUPES +
             " --offset 300 " +
             " --order " + TRANSCRIPTS +
             " --xgtags " +

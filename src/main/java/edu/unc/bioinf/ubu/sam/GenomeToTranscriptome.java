@@ -16,12 +16,14 @@ public class GenomeToTranscriptome {
         String argz = 
             "--bed /home/lisle/data/coord_convert/ucsc_known_gene_bed.txt " +
             "--dupes /home/lisle/data/coord_convert/dupes3.txt " +
-            "--offset 300 " +
+            "--offset 25 " +
             "--order /home/lisle/data/coord_convert/hg19_M_ref.transcripts.fa " +
             "--xgtags " +
             "--reverse " +
-            "--in /home/lisle/gtof/conv/really_small_sorted_by_ref_and_read.bam " +
-            "--out /home/lisle/gtof/conv/transcriptome_lazy.bam "
+            "--in /home/lisle/data/sam_diff/test3/sorted_by_ref_name.sam " +
+            "--out /home/lisle/data/sam_diff/test3/out2.bam "
+//            "--in /home/lisle/gtof/conv/really_small_sorted_by_ref_and_read.bam " +
+//            "--out /home/lisle/gtof/conv/transcriptome_lazy.bam "
 //            "--in /home/lisle/data/coord_convert/sorted_tiny.sam " +
 //            "--out /home/lisle/data/coord_convert/tiny_isoform2.sam "
 //          "--in /home/lisle/data/coord_convert/testing2/reverse.sam " +
@@ -34,7 +36,8 @@ public class GenomeToTranscriptome {
         
         run(argz.split(" "));
 */
-        
+
+        System.out.println("mem: " + Runtime.getRuntime().totalMemory());
     }
     
     public static void run(String[] args) throws Exception {
@@ -68,8 +71,8 @@ public class GenomeToTranscriptome {
             
             // Instantiate converter and run
             System.out.println("Converting");
-            String dupeFile = options.hasDuplicatesFile() ? options.getDuplicatesFile() : null;
-            GenomeToTranscriptomeConverter converter = new GenomeToTranscriptomeConverter(isoformIndex, isoformOrderLoader, dupeFile);
+            
+            GenomeToTranscriptomeConverter converter = new GenomeToTranscriptomeConverter(isoformIndex, isoformOrderLoader, options.isSingleEnd());
             converter.setPositiveStrandReportingOnly(options.isPositiveStrandReportingOnly());
             converter.setShouldOutputXgTags(options.shouldOutputXgTags());
             
@@ -95,16 +98,12 @@ public class GenomeToTranscriptome {
         } else {
             buf.append("orderFastaFile: not specified\n");
         }
-        
-        if (options.hasDuplicatesFile()) {
-            buf.append("dupeFile: " + options.getDuplicatesFile() + "\n");
-        } else {
-            buf.append("dupeFile: not specified\n");
-        }
-        
+                
         buf.append("positiveStrandReportingOnly: " + options.isPositiveStrandReportingOnly() + "\n");
         
         buf.append("xgtags: " + options.shouldOutputXgTags() + "\n");
+        
+        buf.append("single: " + options.isSingleEnd() + "\n");
         
         return buf.toString();
     }

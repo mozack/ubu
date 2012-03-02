@@ -15,10 +15,12 @@ import net.sf.samtools.Cigar;
 import net.sf.samtools.CigarElement;
 import net.sf.samtools.CigarOperator;
 import net.sf.samtools.SAMFileHeader;
+import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMFileWriter;
 import net.sf.samtools.SAMFileWriterFactory;
 import net.sf.samtools.SAMRecord;
 import net.sf.samtools.SAMSequenceRecord;
+import net.sf.samtools.SAMFileReader.ValidationStringency;
 
 /**
  * Converts a SAM or BAM file in Genome coordinates to Transcriptome coordinates.
@@ -31,27 +33,17 @@ public class GenomeToTranscriptomeConverter {
     private boolean isPositiveStrandReportingOnly = true;
     private boolean shouldOutputXgTags = false;
     private IsoformOrderLoader isoformOrderLoader;
-    private String currentCluster = "";
-    private int currentClusterCount = 0;
-    // key = dupeCount, value = # clusters w/ this dupe count
-    private Map<Integer, Integer> dupeFrequencyMap = new HashMap<Integer, Integer>();
     
-    private String dupeFile;
+    private boolean isSingleEnd;
     private ReverseComplementor reverseComplementor = new ReverseComplementor();
-    
-    private boolean is1ReadMappedForCluster = false;
-    private boolean isPairMappedForCluster = false;
-    
-    private int totalClusters = 0;
-    private int oneReadClusters = 0;
-    private int pairedClusters = 0;
-    
+        
     private int totalPairsOutput = 0;
     
-    public GenomeToTranscriptomeConverter(IsoformIndex isoformIndex, IsoformOrderLoader isoformOrderLoader, String dupeFile) {
+    public GenomeToTranscriptomeConverter(IsoformIndex isoformIndex, IsoformOrderLoader isoformOrderLoader,
+    		boolean isSingleEnd) {
         this.isoformIndex = isoformIndex;
         this.isoformOrderLoader = isoformOrderLoader;
-        this.dupeFile = dupeFile;
+        this.isSingleEnd = isSingleEnd;
     }
    
     private SAMFileHeader buildHeader() {
@@ -77,10 +69,6 @@ public class GenomeToTranscriptomeConverter {
             isoformOrderLoader.clearCache();
         }
         return isoforms;
-    }
-    
-    private boolean shouldTrackDupes() {
-        return dupeFile != null;
     }
     
     /** 
@@ -160,70 +148,92 @@ public class GenomeToTranscriptomeConverter {
     private String getBaseName(SAMRecord read) {
         return read.getReadName().substring(0, read.getReadName().length()-2);
     }
-    
-    private void updateDupeCounts() {
-        updateDupes(currentClusterCount, dupeFrequencyMap);
+        
+    private SAMRecord buildTranscriptRead(SAMRecord read, Isoform isoform, 
+    		SAMFileHeader header, Cigar positiveCigar, Cigar negativeCigar, int sequenceLength, List<Coordinate> readCoordinates) {
+    	
+        SAMRecord transcriptRead = cloneRead(read);
+        
+        transcriptRead.setHeader(header);
+        
+        // Set ref name to the isoform
+        transcriptRead.setReferenceName(isoform.getIsoformId());
+                                    
+        Cigar cigar = null;
+        int readAlignmentStart;
+        
+        if ((isPositiveStrandReportingOnly) || (isoform.isPositiveStrand())) {
+            cigar = positiveCigar;
+            readAlignmentStart = readCoordinates.get(0).getStart();
+            
+        } else {
+            // Negative strand
+            // invert sequenceLength
+            sequenceLength *= -1;
+            cigar = negativeCigar;
+
+            // Reference alignments from the end of the isoform
+            readAlignmentStart = isoform.getLength() - readCoordinates.get(readCoordinates.size()-1).getStop() + 1;
+            
+            transcriptRead.setReadBases(reverseComplementor.reverseComplement(transcriptRead.getReadBases()));
+            transcriptRead.setBaseQualities(reverseComplementor.reverse(transcriptRead.getBaseQualities()));
+            
+            transcriptRead.setReadNegativeStrandFlag(!read.getReadNegativeStrandFlag());
+            
+            // Check for single end?
+            transcriptRead.setMateNegativeStrandFlag(!read.getMateNegativeStrandFlag());
+        }
+        
+        transcriptRead.setAlignmentStart(readAlignmentStart);
+        
+        transcriptRead.setInferredInsertSize(sequenceLength);
+        
+        transcriptRead.setCigar(cigar);
+                
+        // For troubleshooting purposes
+        if (shouldOutputXgTags) {
+            transcriptRead.setAttribute("XG", read.getReferenceName() + "." + read.getAlignmentStart());
+        }
+        
+        return transcriptRead;
     }
     
-    private void updateDupes(int count, Map<Integer, Integer> dupeFreqMap) {
-        if (count != 0) {
-            Integer frequency = dupeFreqMap.get(count);
-            if (frequency == null) {
-                dupeFreqMap.put(count, 1);
-            } else {
-                dupeFreqMap.put(count, frequency + 1);
+    // Single end, does not include dupe or cluster counting.
+    private void convertAndOutput(SAMRecord read, SAMFileWriter outputSam, SAMFileHeader header) {
+                
+        List<Isoform> potentialIsoformMatches = getPotentialIsoforms(read.getReferenceName(), read.getAlignmentStart(), read.getAlignmentEnd());
+        
+        Cigar positiveCigar = null;
+        Cigar negativeCigar = null;
+        
+        // Convert to transcript Cigar
+        if (!potentialIsoformMatches.isEmpty()) {
+            List<CigarElement> elements = stripIntrons(read.getCigar());
+            
+            positiveCigar = getPositiveStrandCigar(elements);
+            // Mutates elements!
+            negativeCigar = getNegativeStrandCigar(elements);
+        }
+        
+        for (Isoform isoform : potentialIsoformMatches) {
+            List<Coordinate> readCoordinates = isoform.match(read);
+            
+            if (!readCoordinates.isEmpty()) {
+                
+                // Calc the length of the isoform insert (coordinates are inclusive so add 1 to get correct len)
+                int sequenceLength = 
+                    readCoordinates.get(readCoordinates.size()-1).getStop() -
+                    readCoordinates.get(0).getStart() + 1;
+                
+                SAMRecord transcriptRead = buildTranscriptRead(read, isoform, header, positiveCigar, negativeCigar, sequenceLength, readCoordinates);
+                outputSam.addAlignment(transcriptRead);
             }
-        }        
-    }
-        
-    private void writeDupeCounts(Map<Integer, Integer> dupeFreqMap, String file) throws IOException {
-        
-        List<Integer> dupes = new ArrayList<Integer>(dupeFreqMap.keySet());
-        Collections.sort(dupes);
-        
-        BufferedWriter writer = new BufferedWriter(new FileWriter(file, false));
-        
-        for (Integer dupe : dupes) {
-            writer.write(dupe + "," + dupeFreqMap.get(dupe));
-            writer.write('\n');
         }
-        
-        writer.close();
     }
-    
-    private void writeDupeCounts() throws IOException {
-        writeDupeCounts(dupeFrequencyMap, dupeFile);
-    }
-    
-    private void updateClusterCounts() {
-        totalClusters += 1;
-        
-        if (is1ReadMappedForCluster && !isPairMappedForCluster) {
-            oneReadClusters += 1;
-        }
-        
-        if (isPairMappedForCluster) {
-            pairedClusters += 1;
-        }
-        
-        is1ReadMappedForCluster = false;
-        isPairMappedForCluster = false;
-    }
-    
+
+    // Paired end
     private void convertAndOutput(SAMRecord read1, SAMRecord read2, SAMFileWriter outputSam, SAMFileHeader header) {
-        
-        String cluster = getBaseName(read1);
-        if (!cluster.equals(currentCluster)) {
-            if (shouldTrackDupes()) {
-                updateDupeCounts();
-            }
-            
-            currentCluster = cluster;
-            currentClusterCount = 0;
-            
-            updateClusterCounts();
-        }
-        
+                
         List<Isoform> potentialIsoformMatches = getPotentialIsoforms(read1.getReferenceName(), read1.getAlignmentStart(), read2.getAlignmentEnd());
         
         Cigar positiveCigar1 = null;
@@ -247,88 +257,52 @@ public class GenomeToTranscriptomeConverter {
         for (Isoform isoform : potentialIsoformMatches) {
             List<Coordinate> read1Coordinates = isoform.match(read1);
             List<Coordinate> read2Coordinates = isoform.match(read2);
-            
-            is1ReadMappedForCluster = !read1Coordinates.isEmpty() || !read2Coordinates.isEmpty();
-            
+                        
             if (!read1Coordinates.isEmpty() && !read2Coordinates.isEmpty()) {
-                isPairMappedForCluster = true;
                 
-                SAMRecord transcriptRead1 = cloneRead(read1);
-                SAMRecord transcriptRead2 = cloneRead(read2);
-                
-                transcriptRead1.setHeader(header);
-                transcriptRead2.setHeader(header);
-                
-                // Set ref name to the isoform
-                transcriptRead1.setReferenceName(isoform.getIsoformId());
-                transcriptRead2.setReferenceName(isoform.getIsoformId());
-                                    
                 // Calc the length of the isoform insert (coordinates are inclusive so add 1 to get correct len)
                 int sequenceLength = 
                     read2Coordinates.get(read2Coordinates.size()-1).getStop() -
                     read1Coordinates.get(0).getStart() + 1;
                 
-                Cigar cigar1 = null;
-                Cigar cigar2 = null;
-                int read1AlignmentStart;
-                int read2AlignmentStart;
+                SAMRecord transcriptRead1 = buildTranscriptRead(read1, isoform, header, positiveCigar1, negativeCigar1, sequenceLength, read1Coordinates);
+                SAMRecord transcriptRead2 = buildTranscriptRead(read2, isoform, header, positiveCigar2, negativeCigar2, -sequenceLength, read2Coordinates);
                 
-                if ((isPositiveStrandReportingOnly) || (isoform.isPositiveStrand())) {
-                    cigar1 = positiveCigar1;
-                    cigar2 = positiveCigar2;
-                    read1AlignmentStart = read1Coordinates.get(0).getStart();
-                    read2AlignmentStart = read2Coordinates.get(0).getStart();
-                    
-                } else {
-                    // Negative strand
-                    // invert sequenceLength
-                    sequenceLength *= -1;
-                    cigar1 = negativeCigar1;
-                    cigar2 = negativeCigar2;
-                    // Reference alignments from the end of the isoform
-                    read1AlignmentStart = isoform.getLength() - read1Coordinates.get(read1Coordinates.size()-1).getStop() + 1;
-                    read2AlignmentStart = isoform.getLength() - read2Coordinates.get(read2Coordinates.size()-1).getStop() + 1;
-                    
-                    transcriptRead1.setReadBases(reverseComplementor.reverseComplement(transcriptRead1.getReadBases()));
-                    transcriptRead2.setReadBases(reverseComplementor.reverseComplement(transcriptRead2.getReadBases()));
-
-                    transcriptRead1.setBaseQualities(reverseComplementor.reverse(transcriptRead1.getBaseQualities()));
-                    transcriptRead2.setBaseQualities(reverseComplementor.reverse(transcriptRead2.getBaseQualities()));
-                    
-                    transcriptRead1.setReadNegativeStrandFlag(!transcriptRead1.getReadNegativeStrandFlag());
-                    transcriptRead1.setMateNegativeStrandFlag(!transcriptRead1.getMateNegativeStrandFlag());
-                    transcriptRead2.setReadNegativeStrandFlag(!transcriptRead2.getReadNegativeStrandFlag());
-                    transcriptRead2.setMateNegativeStrandFlag(!transcriptRead2.getMateNegativeStrandFlag());
-                }
-                
-                transcriptRead1.setAlignmentStart(read1AlignmentStart);
-                transcriptRead2.setAlignmentStart(read2AlignmentStart);
-                
-                transcriptRead1.setInferredInsertSize(sequenceLength);
-                transcriptRead2.setInferredInsertSize(-sequenceLength);
-                
-                transcriptRead1.setCigar(cigar1);
-                transcriptRead2.setCigar(cigar2);
-                
-                // Set mate info
                 transcriptRead1.setMateAlignmentStart(transcriptRead2.getAlignmentStart());
-                transcriptRead2.setMateAlignmentStart(transcriptRead1.getAlignmentStart());
-                transcriptRead1.setMateReferenceName(isoform.getIsoformId());
-                transcriptRead2.setMateReferenceName(isoform.getIsoformId());
-                
-                // For troubleshooting purposes
-                if (shouldOutputXgTags) {
-                    transcriptRead1.setAttribute("XG", read1.getReferenceName() + "." + read1.getAlignmentStart());
-                    transcriptRead2.setAttribute("XG", read2.getReferenceName() + "." + read2.getAlignmentStart());
-                }
-                
+	            transcriptRead2.setMateAlignmentStart(transcriptRead1.getAlignmentStart());
+	            transcriptRead1.setMateReferenceName(isoform.getIsoformId());
+	            transcriptRead2.setMateReferenceName(isoform.getIsoformId());
+
                 outputSam.addAlignment(transcriptRead1);
                 outputSam.addAlignment(transcriptRead2);
                 
                 totalPairsOutput++;
-                currentClusterCount++;
             }
         }
+    }
+    
+    private void convertFileForSingleEnd(String inputFileName, SAMFileWriter outputSam, SAMFileHeader header) {
+    	System.out.println("Processing single end reads");
+    	
+        File inputFile = new File(inputFileName);
+        
+        SAMFileReader reader = new SAMFileReader(inputFile);
+        reader.setValidationStringency(ValidationStringency.SILENT);
+        
+        for (SAMRecord read : reader) {
+        	convertAndOutput(read, outputSam, header);
+        }
+        
+        reader.close();
+    }
+    
+    private void convertFileForPairedEnd(String inputFileName, SAMFileWriter outputSam, SAMFileHeader header) {
+    	System.out.println("Processing paired end reads");
+        SamReadPairReader reader = new SamReadPairReader(inputFileName);
+        for (ReadPair readPair : reader) {
+            convertAndOutput(readPair.getRead1(), readPair.getRead2(), outputSam, header);
+        }
+        reader.close();
     }
     
     /**
@@ -350,29 +324,15 @@ public class GenomeToTranscriptomeConverter {
         final SAMFileWriter outputSam = new SAMFileWriterFactory().makeSAMOrBAMWriter(header,
                   true, outputFile);
   
-        System.out.println("Processing reads");
-        SamReadPairReader reader = new SamReadPairReader(inputFileName);
-        for (ReadPair readPair : reader) {
-            convertAndOutput(readPair.getRead1(), readPair.getRead2(), outputSam, header);
+        if (isSingleEnd) {
+        	convertFileForSingleEnd(inputFileName, outputSam, header);
+        } else {
+        	convertFileForPairedEnd(inputFileName, outputSam, header);
         }
-        
-        // Call this one more time to include the last cluster
-        updateDupeCounts();
-        updateClusterCounts();
         
         outputSam.close();
-        reader.close();
         
-        if (shouldTrackDupes()) {
-            System.out.println("Outputing dupe counts to file: " + this.dupeFile);
-            writeDupeCounts();
-        }
-        
-        System.out.println("Total unique clusters input: " + totalClusters);
-        System.out.println("Total unique clusters translated: " + pairedClusters);
-        System.out.println("Total unique clusters with only 1 read matched: " + oneReadClusters);
-        System.out.println("Total pairs output: " + totalPairsOutput);
-        
+        System.out.println("Total pairs output: " + totalPairsOutput);        
         System.out.println("Done.");
     }
     
