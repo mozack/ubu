@@ -14,8 +14,15 @@ import net.sf.samtools.SAMRecord;
 
 /**
  * Diffs 2 SAM (or BAM) files.
- * The input files must be sorted by read.
- * Handles multi-mapped reads.
+ * The input files must be sorted by read
+ * Input file sorting should be done via samtools.
+ * (OS level sort may produce different results).
+ * <p>
+ * 2 output SAM (or BAM) files are produced containing reads contained
+ * in one file but not the other.  The entire SAM string is used to identify
+ * a read.
+ * 
+ * Handles multi-mapped reads (as produced by Mapsplice).
  * 
  * @author lmose
  */
