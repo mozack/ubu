@@ -3,9 +3,11 @@ package edu.unc.bioinf.ubu.sam;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import net.sf.samtools.SAMFileHeader;
 import net.sf.samtools.SAMFileReader;
@@ -46,11 +48,23 @@ public class SamReadPairReader implements Iterable<ReadPair> {
     public SAMFileHeader getHeader() {
         return inputSam.getFileHeader();
     }
-
+    
     private List<ReadPair> pairReads(List<SAMRecord> reads1, List<SAMRecord> reads2) {
-        
-        List<ReadPair> readPairs = new ArrayList<ReadPair>();
-        
+    	// This Set is used to guarantee uniqueness of ReadPairs
+    	Set<ReadPair> readPairSet = new HashSet<ReadPair>();
+    	
+    	// This List is used to maintain deterministic order (helpful for unit tests)
+    	List<ReadPair> readPairs = new ArrayList<ReadPair>();
+    	
+    	// Pair reads in both directions to include asymmetrically mated pairs
+    	pairReads(reads1, reads2, readPairSet, readPairs);
+    	pairReads(reads2, reads1, readPairSet, readPairs);
+    	
+    	return readPairs;
+    }
+
+    private void pairReads(List<SAMRecord> reads1, List<SAMRecord> reads2, Set<ReadPair> readPairSet, List<ReadPair> readPairs) {
+                
         // Map of mate info to read1
         Map<String, List<SAMRecord>> mate1Map = new HashMap<String, List<SAMRecord>>();
         
@@ -79,12 +93,14 @@ public class SamReadPairReader implements Iterable<ReadPair> {
 	                    read2 = temp;
 	                }
 	            
-	                readPairs.add(new ReadPair(read1, read2));
+	                ReadPair pair = new ReadPair(read1, read2); 
+	                if (!readPairSet.contains(pair)) {
+	                	readPairs.add(pair);
+	                	readPairSet.add(pair);
+	                }
 	            }
         	}
         }
-        
-        return readPairs;
     }
     
     private String getBaseName(SAMRecord read) {
