@@ -71,6 +71,18 @@ public class GenomeToTranscriptomeConverter {
         return isoforms;
     }
     
+    private List<Isoform> getPotentialIsoforms(SAMRecord read1, SAMRecord read2) {
+    	List<Isoform> isoforms = null;
+    	
+    	if (read1.getReferenceName().equals(read2.getReferenceName())) {
+    		isoforms = getPotentialIsoforms(read1.getReferenceName(), read1.getAlignmentStart(), read2.getAlignmentEnd());
+    	} else {
+    		isoforms = new ArrayList<Isoform>();
+    	}
+    	
+    	return isoforms;
+    }
+    
     /** 
      * Returns a list all isoforms that approximately match the specified
      * genomic coordinates. 
@@ -226,6 +238,11 @@ public class GenomeToTranscriptomeConverter {
                     readCoordinates.get(0).getStart() + 1;
                 
                 SAMRecord transcriptRead = buildTranscriptRead(read, isoform, header, positiveCigar, negativeCigar, sequenceLength, readCoordinates);
+                // Mate info is unspecified
+                transcriptRead.setMateAlignmentStart(0);
+                transcriptRead.setMateReferenceName("*");
+                transcriptRead.setMateUnmappedFlag(true);
+                
                 outputSam.addAlignment(transcriptRead);
             }
         }
@@ -233,8 +250,8 @@ public class GenomeToTranscriptomeConverter {
 
     // Paired end
     private void convertAndOutput(SAMRecord read1, SAMRecord read2, SAMFileWriter outputSam, SAMFileHeader header) {
-                
-        List<Isoform> potentialIsoformMatches = getPotentialIsoforms(read1.getReferenceName(), read1.getAlignmentStart(), read2.getAlignmentEnd());
+
+        List<Isoform> potentialIsoformMatches = getPotentialIsoforms(read1, read2);
         
         Cigar positiveCigar1 = null;
         Cigar negativeCigar1 = null;

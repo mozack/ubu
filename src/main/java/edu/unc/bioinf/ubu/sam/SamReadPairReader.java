@@ -86,14 +86,16 @@ public class SamReadPairReader implements Iterable<ReadPair> {
         	if (readList != null) {
         	
 	            for (SAMRecord read1 : readList) {
+	            	
+	            	SAMRecord firstInPair  = read1;
+	            	SAMRecord secondInPair = read2;
 		            
 	                if (read1.getAlignmentStart() > read2.getAlignmentStart()) {
-	                    SAMRecord temp = read1;
-	                    read1 = read2;
-	                    read2 = temp;
+	                	firstInPair = read2;
+	                	secondInPair = read1;
 	                }
 	            
-	                ReadPair pair = new ReadPair(read1, read2); 
+	                ReadPair pair = new ReadPair(firstInPair, secondInPair); 
 	                if (!readPairSet.contains(pair)) {
 	                	readPairs.add(pair);
 	                	readPairSet.add(pair);

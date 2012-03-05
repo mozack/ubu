@@ -11,17 +11,17 @@ public class GenomeToTranscriptome {
 
     public static void main(String[] args) throws Exception {
         run(args);
-        
-/*        
+
+    	/*
         String argz = 
-            "--bed /home/lisle/data/coord_convert/ucsc_known_gene_bed.txt " +
-            "--dupes /home/lisle/data/coord_convert/dupes3.txt " +
+            "--bed /home/lisle/gaf/ref/gaf.bed " +
             "--offset 25 " +
             "--order /home/lisle/data/coord_convert/hg19_M_ref.transcripts.fa " +
             "--xgtags " +
             "--reverse " +
-            "--in /home/lisle/data/sam_diff/test3/sorted_by_ref_name.sam " +
-            "--out /home/lisle/data/sam_diff/test3/out2.bam "
+            "--in /home/lisle/data/xlate/self_mate/sorted.bam " +
+//            "--single " +
+            "--out /home/lisle/data/xlate/self_mate/out.bam "
 //            "--in /home/lisle/gtof/conv/really_small_sorted_by_ref_and_read.bam " +
 //            "--out /home/lisle/gtof/conv/transcriptome_lazy.bam "
 //            "--in /home/lisle/data/coord_convert/sorted_tiny.sam " +
@@ -35,7 +35,7 @@ public class GenomeToTranscriptome {
             ;
         
         run(argz.split(" "));
-*/
+        */
 
         System.out.println("mem: " + Runtime.getRuntime().totalMemory());
     }
