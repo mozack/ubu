@@ -131,13 +131,13 @@ public class GeneReadCounterBWA {
 	
 	public static void main(String[] args) throws IOException {
 				
-//		String isoformGeneFile = args[0];
-//		String input = args[1];
-//		String output = args[2];
+		String isoformGeneFile = args[0];
+		String input = args[1];
+		String output = args[2];
 		
-		String isoformGeneFile = "/home/lisle/gaf/ref/gaf.knownToLocus";
-		String input = "/home/lisle/data/gene_counts/bwa2.bam";
-		String output = "/home/lisle/data/gene_counts/bwa2.tsv";
+//		String isoformGeneFile = "/home/lisle/gaf/ref/gaf.knownToLocus";
+//		String input = "/home/lisle/data/gene_counts/bwa2.bam";
+//		String output = "/home/lisle/data/gene_counts/bwa2.tsv";
 
 		long s = System.currentTimeMillis();
 				
