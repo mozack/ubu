@@ -2,6 +2,7 @@ package edu.unc.bioinf.ubu;
 
 import java.util.Arrays;
 
+import edu.unc.bioinf.ubu.fastq.FastqMapsplicePrep;
 import edu.unc.bioinf.ubu.sam.GenomeToTranscriptome;
 
 /**
@@ -34,12 +35,11 @@ public class Ubu {
 			} else if (cmd.equals(JUNC)) {
 				printNotYetSupported(cmd);
 			} else if (cmd.equals(MAPSPLICE_PREP)) {
-				printNotYetSupported(cmd);
+				FastqMapsplicePrep.run(argz);
 			} else {
 				System.out.println("Command [" + cmd + "] is unrecognized.");
 				printAvailablePrograms();
 			}
-			
 		}
 	}
 	
@@ -48,13 +48,14 @@ public class Ubu {
 	}
 	
 	private void printAvailablePrograms() {
+		System.out.println("UNC-Chapel Hill Bioinformatics Utilities");
 		System.out.println("Available commands:");
 		
 		printProgram("xlate", "\tTranslate from genome to transcriptome coordinates");
-		printProgram("samdiff", "\tDiff two SAM or BAM files");
+		printProgram("samdiff", "\tDiff two SAM/BAM files outputting discrepancies in corresponding SAM/BAM files");
 		printProgram("samfilter", "Filter reads from a SAM or BAM file");
 		printProgram("junc", "\tCount splice junctions in a SAM or BAM file");
-		printProgram("mapsplice-prep", "Prep a fastq file Mapsplice (for Casava 1.8 output)");
+		printProgram("mapsplice-prep", "Prep a single fastq file for Mapsplice (for Casava 1.8 output)");
 	}
 	
 	private void printProgram(String name, String desc) {

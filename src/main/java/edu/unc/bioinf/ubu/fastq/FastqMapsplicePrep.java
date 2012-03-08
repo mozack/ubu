@@ -50,21 +50,33 @@ public class FastqMapsplicePrep {
         System.out.println("Done.");
     }
     
+    public static void run(String[] args) throws IOException {
+    	FastqMapsplicePrepOptions options = new FastqMapsplicePrepOptions();
+    	options.parseOptions(args);
+        
+    	if (options.isValid()) {
+	        FastqMapsplicePrep prep = new FastqMapsplicePrep(options.getInputFile(), options.getOutputFile(),
+	        		options.getSuffix());
+	        
+	        prep.process();
+    	}
+    }
+    
+    /*
     public static void main(String[] args) throws IOException {
 //        String input = "/home/lisle/mapsplice12/out.fastq";
 //        String output = "/home/lisle/mapsplice12/out2.fastq";
 //        String suffix = "/1";
         
-        if (args.length != 3) {
-            System.out.println("Usage: FastqMapsplicePrep <input_file> <output_file> <suffix>");
-            System.exit(-1);
-        }
-        
-        String input = args[0];
-        String output = args[1];
-        String suffix = args[2];
-        
-        FastqMapsplicePrep prep = new FastqMapsplicePrep(input, output, suffix);
-        prep.process();
+//        if (args.length != 3) {
+//            System.out.println("Usage: FastqMapsplicePrep <input_file> <output_file> <suffix>");
+//            System.exit(-1);
+//        }
+//        
+//        String input = args[0];
+//        String output = args[1];
+//        String suffix = args[2];
+    	
     }
+    */
 }
