@@ -1,15 +1,10 @@
 package edu.unc.bioinf.ubu.sam;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import net.sf.samtools.Cigar;
 import net.sf.samtools.CigarElement;
@@ -25,7 +20,7 @@ import net.sf.samtools.SAMFileReader.ValidationStringency;
 /**
  * Converts a SAM or BAM file in Genome coordinates to Transcriptome coordinates.
  * 
- * @author lmose
+ * @author Lisle Mose (lmose at unc dot edu)
  */
 public class GenomeToTranscriptomeConverter {
     
@@ -154,11 +149,6 @@ public class GenomeToTranscriptomeConverter {
             e.printStackTrace();
             throw new RuntimeException(e);
         }
-    }
-    
-    //TODO - Dupe of SamReadPairReader logic
-    private String getBaseName(SAMRecord read) {
-        return read.getReadName().substring(0, read.getReadName().length()-2);
     }
         
     private SAMRecord buildTranscriptRead(SAMRecord read, Isoform isoform, 
@@ -306,8 +296,13 @@ public class GenomeToTranscriptomeConverter {
         SAMFileReader reader = new SAMFileReader(inputFile);
         reader.setValidationStringency(ValidationStringency.SILENT);
         
+        int cnt = 0;
         for (SAMRecord read : reader) {
         	convertAndOutput(read, outputSam, header);
+        	
+        	if ((cnt++ % 1000000) == 0) {
+        		System.out.println("Processed " + cnt + " reads.");
+        	}
         }
         
         reader.close();
