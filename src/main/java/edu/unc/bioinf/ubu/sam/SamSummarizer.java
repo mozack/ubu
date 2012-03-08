@@ -67,13 +67,15 @@ public class SamSummarizer {
     				alignedBases += block.getLength();
     			}
     		}
+    	
+	    	Integer editDistance = read.getIntegerAttribute(EDIT_DISTANCE_TAG);
+	    	
+	    	ReferenceCounts counts = getReferenceCounts(read.getReferenceName());
+	    	counts.incrementAlignedBases(alignedBases);
+	    	if (editDistance != null) {
+	    		counts.incrementEditDistanceCount(editDistance);
+	    	}
     	}
-    	
-    	int editDistance = read.getIntegerAttribute(EDIT_DISTANCE_TAG);
-    	
-    	ReferenceCounts counts = getReferenceCounts(read.getReferenceName());
-    	counts.incrementAlignedBases(alignedBases);
-    	counts.incrementEditDistanceCount(editDistance);
     }
     
     private void outputCounts(BufferedWriter writer) throws IOException {
@@ -144,8 +146,8 @@ public class SamSummarizer {
     	String input = args[0];
     	String output = args[1];
     	
-//    	String input = "/home/lisle/data/summarizer/uc001iaf.1.sam";
-//    	String output = "/home/lisle/data/summarizer/uc001iaf.1.sam_output.tsv";
+//    	String input = "/home/lisle/data/summarizer/bwa1.sam";
+//    	String output = "/home/lisle/data/summarizer/bwa1.tsv";
     	
     	new SamSummarizer().summarize(input, output);
     }

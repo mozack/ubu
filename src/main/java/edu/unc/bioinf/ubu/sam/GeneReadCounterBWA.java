@@ -50,6 +50,7 @@ public class GeneReadCounterBWA {
         SAMFileReader reader = new SAMFileReader(file);
         reader.setValidationStringency(ValidationStringency.SILENT);
 
+        int cnt = 0;
         for (SAMRecord read : reader) {
         	if (!read.getReadUnmappedFlag()) {
         		Set<String> genes = new HashSet<String>();
@@ -84,6 +85,10 @@ public class GeneReadCounterBWA {
         		
         		incrementCount(totalGeneCounts, gene);
         	}
+        	
+            if ((cnt++ % 1000000) == 0) {
+            	System.out.println("Processed " + cnt + " reads.");
+            }
         }
 	}
 	
