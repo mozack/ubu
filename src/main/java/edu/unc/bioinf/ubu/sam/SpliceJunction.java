@@ -4,7 +4,7 @@ package edu.unc.bioinf.ubu.sam;
  * Represents a splice junction
  * TODO: Rename this to something more generic.
  * 
- * @author lmose
+ * @author Lisle Mose (lmose at unc dot edu)
  */
 public class SpliceJunction implements Comparable<SpliceJunction> {
 

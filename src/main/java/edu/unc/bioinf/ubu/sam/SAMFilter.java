@@ -16,7 +16,7 @@ import net.sf.samtools.SAMRecord;
  * Filters paired reads from a SAM or BAM file.  Indels and/or clusters
  * greater than a specified insert length may be filtered.
  * 
- * @author lmose
+ * @author Lisle Mose (lmose at unc dot edu)
  */
 public class SAMFilter {
     

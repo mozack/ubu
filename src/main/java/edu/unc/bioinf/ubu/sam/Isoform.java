@@ -10,7 +10,8 @@ import net.sf.samtools.SAMRecord;
 
 /**
  * Representation of an Isoform.
- * @author lmose
+ * 
+ * @author Lisle Mose (lmose at unc dot edu)
  */
 public class Isoform {
     

@@ -8,7 +8,7 @@ import org.apache.commons.lang.ArrayUtils;
 /**
  * Utility class for reversing and complementing bases.
  * 
- * @author lmose
+ * @author Lisle Mose (lmose at unc dot edu)
  */
 public class ReverseComplementor {
     

@@ -10,7 +10,7 @@ import org.testng.annotations.Test;
 /**
  * System test for {@code GenomeToTranscriptome}
  * 
- * @author lmose
+ * @author Lisle Mose (lmose at unc dot edu)
  */
 public class GenomeToTranscriptomeTest {
 	

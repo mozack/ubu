@@ -19,7 +19,7 @@ import org.apache.commons.collections.MultiMap;
  * Isoforms can be retrieved by chromosome and genome position.
  * 
  * TODO(lmose): Factor out reading of BED file.
- * @author lmose
+ * @author Lisle Mose (lmose at unc dot edu)
  */
 public class IsoformIndex {
     

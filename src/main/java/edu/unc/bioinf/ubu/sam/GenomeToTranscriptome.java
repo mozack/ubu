@@ -5,7 +5,7 @@ import java.util.Date;
 /**
  * Main class for converting genome to transcriptome coordinates
  *  
- * @author lmose
+ * @author Lisle Mose (lmose at unc dot edu)
  */
 public class GenomeToTranscriptome {
 

@@ -11,7 +11,7 @@ import edu.unc.bioinf.ubu.sam.GenomeToTranscriptomeOptions;
 
 /**
  * Unit tests for {@code GenomeToTranscriptomeOptions}
- * @author lmose
+ * @author Lisle Mose (lmose at unc dot edu)
  */
 public class GenomeToTranscriptomeOptionsTest {
 

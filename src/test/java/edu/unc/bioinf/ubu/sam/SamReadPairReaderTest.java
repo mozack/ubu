@@ -15,7 +15,7 @@ import edu.unc.bioinf.ubu.sam.SamReadPairReader;
 /**
  * Unit tests for {@code SamReadPairReader}
  * 
- * @author lmose
+ * @author Lisle Mose (lmose at unc dot edu)
  */
 public class SamReadPairReaderTest {
 

@@ -10,7 +10,7 @@ import java.util.Map;
 /**
  * Handles reading FastqRecords from file.
  * 
- * @author lmose
+ * @author Lisle Mose (lmose at unc dot edu)
  */
 public class FastqInputFile {
     

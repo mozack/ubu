@@ -4,7 +4,7 @@ package edu.unc.bioinf.ubu.sam;
  * Represents a set of coordinates specified by a start and stop position.
  * The coordinates are assumed to be inclusive.
  * 
- * @author lmose
+ * @author Lisle Mose (lmose at unc dot edu)
  */
 public class Coordinate implements Comparable<Coordinate> {
 

@@ -15,7 +15,7 @@ import net.sf.samtools.SAMFileReader.ValidationStringency;
 /**
  * Counts splice junctions in a bam or sam file
  * 
- * @author lmose
+ * @author Lisle Mose (lmose at unc dot edu)
  */
 public class SpliceJunctionCounter {
     

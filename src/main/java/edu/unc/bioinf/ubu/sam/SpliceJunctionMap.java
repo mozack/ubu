@@ -22,7 +22,7 @@ import java.util.Map;
  * 
  * Coordinates defined in the file are exclusive
  * 
- * @author lmose
+ * @author Lisle Mose (lmose at unc dot edu)
  */
 public class SpliceJunctionMap {
     

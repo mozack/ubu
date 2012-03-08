@@ -8,7 +8,7 @@ import java.io.IOException;
  * Mapsplice currently does not accept fastq ids that contain spaces or do not end with /1 or /2.
  * Casava 1.8 is currently outputting fastq files in the above format.
  * 
- * @author lmose
+ * @author Lisle Mose (lmose at unc dot edu)
  */
 public class FastqMapsplicePrep {
 

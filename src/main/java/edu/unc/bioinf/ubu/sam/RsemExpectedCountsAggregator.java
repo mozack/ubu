@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * Builds a matrix of expected counts from rsem files.
  *  
- * @author lmose
+ * @author Lisle Mose (lmose at unc dot edu)
  */
 public class RsemExpectedCountsAggregator {
     

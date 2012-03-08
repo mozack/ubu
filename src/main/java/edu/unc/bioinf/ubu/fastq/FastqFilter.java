@@ -4,7 +4,7 @@ package edu.unc.bioinf.ubu.fastq;
 /**
  * Filtering class for discarding unmatched reads in paired end fastq files.
  * 
- * @author lmose
+ * @author Lisle Mose (lmose at unc dot edu)
  */
 @Deprecated
 public class FastqFilter {

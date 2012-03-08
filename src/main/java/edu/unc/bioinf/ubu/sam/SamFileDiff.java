@@ -24,7 +24,7 @@ import net.sf.samtools.SAMRecord;
  * 
  * Handles multi-mapped reads (as produced by Mapsplice).
  * 
- * @author lmose
+ * @author Lisle Mose (lmose at unc dot edu)
  */
 public class SamFileDiff {
 	

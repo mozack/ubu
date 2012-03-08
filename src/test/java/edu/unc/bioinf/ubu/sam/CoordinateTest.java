@@ -11,7 +11,7 @@ import edu.unc.bioinf.ubu.sam.Coordinate;
 /**
  * Unit tests for {@code Coordinate}
  * 
- * @author lmose
+ * @author Lisle Mose (lmose at unc dot edu)
  */
 public class CoordinateTest {
     

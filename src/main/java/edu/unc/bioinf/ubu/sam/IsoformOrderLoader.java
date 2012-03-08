@@ -10,7 +10,7 @@ import java.util.Map;
 /**
  * Reads a fasta file and caches ordering of isoforms in a Map
  * 
- * @author lmose
+ * @author Lisle Mose (lmose at unc dot edu)
  */
 public class IsoformOrderLoader {
 

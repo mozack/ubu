@@ -9,6 +9,8 @@ import edu.unc.bioinf.ubu.sam.ReverseComplementor;
 
 /**
  * Unit tests for {@code ReverseComplementor}
+ * 
+ * @author Lisle Mose (lmose at unc dot edu)
  */
 public class ReverseComplementorTest {
     

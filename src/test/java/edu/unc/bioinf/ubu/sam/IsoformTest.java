@@ -18,7 +18,7 @@ import edu.unc.bioinf.ubu.sam.Isoform;
 /**
  * Unit tests for {@code Isoform}
  * 
- * @author lmose
+ * @author Lisle Mose (lmose at unc dot edu)
  */
 public class IsoformTest {
     
