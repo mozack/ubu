@@ -16,7 +16,17 @@ import net.sf.samtools.SAMRecord;
 import net.sf.samtools.SAMFileReader.ValidationStringency;
 
 /**
- * Summarizes aligned base and tag information per reference in a SAM or BAM file.
+ * Provides summary statistics per reference for a SAM/BAM file.  Unmapped
+ * reads are not included in summary stats.
+ * 
+ * Output columns:
+ * 
+ * reference name
+ * number of aligned bases
+ * edit distance count
+ * base error rate (<edit distance count>/<number of aligned bases>)
+ * number of reads
+ * number of reads with zero mapping quality
  * 
  * @author Lisle Mose (lmose at unc dot edu)
  */
@@ -26,7 +36,7 @@ public class SamSummarizer {
 	
 	private Map<String, ReferenceCounts> refCountMap = new HashMap<String, ReferenceCounts>();
 	
-    public void summarize(String inputFile, String outputFile) throws IOException {
+    public void summarize(String inputFile, String outputFile, boolean shouldOutputHeader) throws IOException {
         
         long start = System.currentTimeMillis();
         
@@ -47,8 +57,12 @@ public class SamSummarizer {
                 System.out.println("Processed " + count + " reads.");
             }
         }
-                
-        outputCounts(writer);
+
+        if (shouldOutputHeader) {
+        	outputHeader(writer);
+        }
+        
+        outputAllCounts(writer);
         writer.close();
         
         long stop = System.currentTimeMillis();
@@ -75,27 +89,72 @@ public class SamSummarizer {
 	    	if (editDistance != null) {
 	    		counts.incrementEditDistanceCount(editDistance);
 	    	}
+	    	
+	    	if (read.getMappingQuality() == 0) {
+	    		counts.incrementMappingQualityZeroCount(1);
+	    	}
+	    	
+	    	counts.incrementReadCount(1);
     	}
     }
     
-    private void outputCounts(BufferedWriter writer) throws IOException {
+    private void outputAllCounts(BufferedWriter writer) throws IOException {
+    	
+    	ReferenceCounts totals = new ReferenceCounts();
+    	
     	for (String ref : getSortedReferences()) {
     		ReferenceCounts counts = getReferenceCounts(ref);
+    		outputCounts(counts, ref, writer);
     		
-    		StringBuffer buf = new StringBuffer();
-    		buf.append(ref);
-    		buf.append('\t');
-    		buf.append(counts.getAlignedBases());
-    		buf.append('\t');
-    		buf.append(counts.getEditDistanceCount());
-    		buf.append('\t');
-    		buf.append(counts.getErrorRate());
-    		buf.append('\n');
-    		
-    		writer.write(buf.toString());
+    		totals.incrementAlignedBases(counts.getAlignedBases());
+    		totals.incrementEditDistanceCount(counts.getEditDistanceCount());
+    		totals.incrementMappingQualityZeroCount(counts.getMappingQualityZeroCount());
+    		totals.incrementReadCount(counts.getReadCount());
     	}
+    	
+    	outputCounts(totals, "Total", writer);
     }
     
+    private void outputHeader(BufferedWriter writer) throws IOException {
+    	StringBuffer buf = new StringBuffer();
+    	
+		buf.append("ref");
+		buf.append('\t');
+		buf.append("Aligned_Bases");
+		buf.append('\t');
+		buf.append("NM");
+		buf.append('\t');
+		buf.append("Error_Rate");
+		buf.append('\t');
+		buf.append("Reads");
+		buf.append('\t');
+		buf.append("0_Mapping_Quality");
+		buf.append('\t');
+		buf.append("0_Mapping_Quality_Rate");
+		buf.append('\n');
+
+		writer.write(buf.toString());
+    }
+    
+    private void outputCounts(ReferenceCounts counts, String ref, BufferedWriter writer) throws IOException {
+		StringBuffer buf = new StringBuffer();
+		buf.append(ref);
+		buf.append('\t');
+		buf.append(counts.getAlignedBases());
+		buf.append('\t');
+		buf.append(counts.getEditDistanceCount());
+		buf.append('\t');
+		buf.append(counts.getErrorRate());
+		buf.append('\t');
+		buf.append(counts.getReadCount());
+		buf.append('\t');
+		buf.append(counts.getMappingQualityZeroCount());
+		buf.append('\t');
+		buf.append(counts.getMappingQualityZeroRate());
+		buf.append('\n');
+		
+		writer.write(buf.toString());
+    }
     
     private List<String> getSortedReferences() {
     	List<String> refs = new ArrayList<String>();
@@ -120,13 +179,23 @@ public class SamSummarizer {
     static class ReferenceCounts {
     	private long alignedBases = 0;
     	private long editDistanceCount = 0;
+    	private long mappingQualityZeroCount = 0;
+    	private long readCount = 0;
     	
-    	void incrementAlignedBases(int inc) {
+    	void incrementAlignedBases(long inc) {
     		alignedBases += inc;
     	}
     	
-    	void incrementEditDistanceCount(int inc) {
+    	void incrementEditDistanceCount(long inc) {
     		editDistanceCount += inc;
+    	}
+    	
+    	void incrementMappingQualityZeroCount(long inc) {
+    		mappingQualityZeroCount += inc;
+    	}
+    	
+    	void incrementReadCount(long inc) {
+    		readCount += inc;
     	}
     	
     	long getAlignedBases() {
@@ -140,15 +209,31 @@ public class SamSummarizer {
     	double getErrorRate() {
     		return (double) editDistanceCount / (double) alignedBases;
     	}
+    	
+    	long getMappingQualityZeroCount() {
+    		return mappingQualityZeroCount;
+    	}
+    	
+    	long getReadCount() {
+    		return readCount;
+    	}
+    	
+    	double getMappingQualityZeroRate() {
+    		return (double) mappingQualityZeroCount / (double) readCount;
+    	}
+    }
+    
+    public static void run(String[] args) throws IOException {
+    	SamSummarizerOptions options = new SamSummarizerOptions();
+    	options.parseOptions(args);
+    	
+    	if (options.isValid()) {
+    		new SamSummarizer().summarize(options.getInputFile(),
+    				options.getOutputFile(), options.shouldOutputHeader());
+    	}
     }
     
     public static void main(String[] args) throws IOException {
-    	String input = args[0];
-    	String output = args[1];
-    	
-//    	String input = "/home/lisle/data/summarizer/bwa1.sam";
-//    	String output = "/home/lisle/data/summarizer/bwa1.tsv";
-    	
-    	new SamSummarizer().summarize(input, output);
+    	run(args);    	
     }
 }

@@ -4,6 +4,7 @@ import java.util.Arrays;
 
 import edu.unc.bioinf.ubu.fastq.FastqMapsplicePrep;
 import edu.unc.bioinf.ubu.sam.GenomeToTranscriptome;
+import edu.unc.bioinf.ubu.sam.SamSummarizer;
 
 /**
  * Entry point for Ubu java command line utilities
@@ -12,10 +13,14 @@ import edu.unc.bioinf.ubu.sam.GenomeToTranscriptome;
  */
 public class Ubu {
 	
-	private static final String SAM_DIFF = "samdiff";
-	private static final String SAM_FILTER = "samfilter";
+	private static final String TRANSLATE = "xlate";
+	private static final String SAM_DIFF = "sam-diff";
+	private static final String SAM_FILTER = "sam-filter";
+	private static final String SAM_SUMMARIZE = "sam-summary";
 	private static final String JUNC = "junc";
 	private static final String MAPSPLICE_PREP = "mapsplice-prep";
+	
+	private static final int MAX_CMD_LEN = 15;
 	
 	public void run(String[] args) throws Exception {
 		if (args.length == 0) {
@@ -26,7 +31,7 @@ public class Ubu {
 			
 			String[] argz = Arrays.copyOfRange(args, 1, args.length);
 			
-			if (cmd.equals("xlate")) {
+			if (cmd.equals(TRANSLATE)) {
 				GenomeToTranscriptome.run(argz);
 			} else if (cmd.equals(SAM_DIFF)) {
 				printNotYetSupported(cmd);
@@ -36,6 +41,8 @@ public class Ubu {
 				printNotYetSupported(cmd);
 			} else if (cmd.equals(MAPSPLICE_PREP)) {
 				FastqMapsplicePrep.run(argz);
+			} else if (cmd.equals(SAM_SUMMARIZE)) {
+				SamSummarizer.run(argz);
 			} else {
 				System.out.println("Command [" + cmd + "] is unrecognized.");
 				printAvailablePrograms();
@@ -51,11 +58,20 @@ public class Ubu {
 		System.out.println("UNC-Chapel Hill Bioinformatics Utilities");
 		System.out.println("Available commands:");
 		
-		printProgram("xlate", "\tTranslate from genome to transcriptome coordinates");
-		printProgram("samdiff", "\tDiff two SAM/BAM files outputting discrepancies in corresponding SAM/BAM files");
-		printProgram("samfilter", "Filter reads from a SAM or BAM file");
-		printProgram("junc", "\tCount splice junctions in a SAM or BAM file");
-		printProgram("mapsplice-prep", "Prep a single fastq file for Mapsplice (for Casava 1.8 output)");
+		printProgram(getPaddedString(TRANSLATE), "Translate from genome to transcriptome coordinates");
+		printProgram(getPaddedString(SAM_DIFF), "Diff two SAM/BAM files outputting discrepancies in corresponding SAM/BAM files");
+		printProgram(getPaddedString(SAM_FILTER), "Filter reads from a SAM or BAM file");
+		printProgram(getPaddedString(SAM_SUMMARIZE), "Output summary statistics per reference for a SAM/BAM file.");
+		printProgram(getPaddedString(JUNC), "Count splice junctions in a SAM or BAM file");
+		printProgram(getPaddedString(MAPSPLICE_PREP), "Prep a single fastq file for Mapsplice (for Casava 1.8 output)");
+	}
+	
+	private String getPaddedString(String str) {
+		int pad = MAX_CMD_LEN - str.length();
+		for (int i=0; i<pad; i++) {
+			str += ' ';
+		}
+		return str;
 	}
 	
 	private void printProgram(String name, String desc) {
