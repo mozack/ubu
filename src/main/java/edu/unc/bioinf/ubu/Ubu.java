@@ -4,6 +4,7 @@ import java.util.Arrays;
 
 import edu.unc.bioinf.ubu.fastq.FastqMapsplicePrep;
 import edu.unc.bioinf.ubu.sam.GenomeToTranscriptome;
+import edu.unc.bioinf.ubu.sam.SamFileDiff;
 import edu.unc.bioinf.ubu.sam.SamSummarizer;
 
 /**
@@ -34,7 +35,7 @@ public class Ubu {
 			if (cmd.equals(TRANSLATE)) {
 				GenomeToTranscriptome.run(argz);
 			} else if (cmd.equals(SAM_DIFF)) {
-				printNotYetSupported(cmd);
+				SamFileDiff.run(argz);
 			} else if (cmd.equals(SAM_FILTER)) {
 				printNotYetSupported(cmd);
 			} else if (cmd.equals(JUNC)) {

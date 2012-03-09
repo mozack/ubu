@@ -21,7 +21,7 @@ import net.sf.samtools.SAMRecord;
  * 2 output SAM (or BAM) files are produced containing reads contained
  * in one file but not the other.  The entire SAM string is used to identify
  * a read.
- * 
+ * <p>
  * Handles multi-mapped reads (as produced by Mapsplice).
  * 
  * @author Lisle Mose (lmose at unc dot edu)
@@ -39,6 +39,12 @@ public class SamFileDiff {
 	private Iterator<List<SAMRecord>> iter2;
 
 	public void diff(String samInputFileName1, String samInputFileName2, String samOutputFileName1, String samOutputFileName2) {
+		
+		System.out.println("in1:\t" + samInputFileName1);
+		System.out.println("in2:\t" + samInputFileName2);
+		System.out.println("out1:\t" + samOutputFileName1);
+		System.out.println("out2:\t" + samOutputFileName2);
+		
 		SamMultiMappingReader in1 = new SamMultiMappingReader(samInputFileName1);
 		SamMultiMappingReader in2 = new SamMultiMappingReader(samInputFileName2);
 		
@@ -56,7 +62,6 @@ public class SamFileDiff {
         	List<SAMRecord> readList2 = getNextList2();
         	        	
         	int compare = compareReadNames(readList1.get(0), readList2.get(0));
-//        	int compare = readList1.get(0).getSAMString().compareTo(readList2.get(0).getSAMString());
         	
         	if (compare < 0) {
         		addAlignments(out1, readList1);
@@ -229,50 +234,20 @@ public class SamFileDiff {
 		}
 	}
 	
-	public static void main(String[] args) {
-//		String s = "UNC12-SN629_146:2:1101:2021:128357/1";
-//		String[] f = s.split("[:/]");
-//		
-//		for (String f1 : f) {
-//			System.out.println(f1);
-//		}
+	public static void run(String[] args) {
 		
-		String in1  = args[0];
-		String in2  = args[1];
-		String out1 = args[2];
-		String out2 = args[3];
-		
-//		/home/lisle/code/ubu/src/test/java/edu/unc/bioinf/ubu/sam/testdata/test_output
-		
-//		/home/lisle/data/sam_diff/test2
-
-//		String in1  = "/home/lisle/data/sam_diff/test2/1.sam";
-//		String in2  = "/home/lisle/data/sam_diff/test2/2.sam";
-//		String out1 = "/home/lisle/data/sam_diff/test2/out1.bam";
-//		String out2 = "/home/lisle/data/sam_diff/test2/out2.bam";
-		
-//		String in1  = "/home/lisle/code/ubu/src/test/java/edu/unc/bioinf/ubu/sam/testdata/test_output/1.sam";
-//		String in2  = "/home/lisle/code/ubu/src/test/java/edu/unc/bioinf/ubu/sam/testdata/test_output/2.sam";
-//		String out1 = "/home/lisle/code/ubu/src/test/java/edu/unc/bioinf/ubu/sam/testdata/test_output/out1.bam";
-//		String out2 = "/home/lisle/code/ubu/src/test/java/edu/unc/bioinf/ubu/sam/testdata/test_output/out2.bam";
-		
-//		String in1  = "/home/lisle/data/sam_diff/small/1.sam";
-//		String in2  = "/home/lisle/data/sam_diff/small/2.sam";
-//		String out1 = "/home/lisle/data/sam_diff/small/out1.sam";
-//		String out2 = "/home/lisle/data/sam_diff/small/out2.sam";
-
-
-		System.out.println("Input 1: " + in1);
-		System.out.println("Input 2: " + in2);
-		System.out.println("Output 1: " + out1);
-		System.out.println("Output 2: " + out2);
-		
-		long s = System.currentTimeMillis();
-		
-		new SamFileDiff().diff(in1, in2, out1, out2);
-		
-		long e = System.currentTimeMillis();
-		
-		System.out.println("Done.  Elapsed secs: " + (e-s)/1000);
+		SamFileDiffOptions options = new SamFileDiffOptions();
+		options.parseOptions(args);
+		if (options.isValid()) {
+			
+			long s = System.currentTimeMillis();
+			
+			new SamFileDiff().diff(options.getInput1File(), options.getInput2File(),
+					options.getOutput1File(), options.getOutput2File());
+			
+			long e = System.currentTimeMillis();
+			
+			System.out.println("Done.  Elapsed secs: " + (e-s)/1000);
+		}
 	}
 }
