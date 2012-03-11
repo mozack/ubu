@@ -182,8 +182,10 @@ public class GenomeToTranscriptomeConverter {
             
             transcriptRead.setReadNegativeStrandFlag(!read.getReadNegativeStrandFlag());
             
-            // Check for single end?
-            transcriptRead.setMateNegativeStrandFlag(!read.getMateNegativeStrandFlag());
+            // If paired, flip the mate's negative strand flag.
+            if (transcriptRead.getReadPairedFlag()) {
+            	transcriptRead.setMateNegativeStrandFlag(!read.getMateNegativeStrandFlag());
+            }
         }
         
         transcriptRead.setAlignmentStart(readAlignmentStart);
