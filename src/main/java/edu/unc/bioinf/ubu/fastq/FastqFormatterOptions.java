@@ -8,7 +8,7 @@ import edu.unc.bioinf.ubu.util.Options;
  * 
  * @author Lisle Mose (lmose at unc dot edu)
  */
-public class FastqMapsplicePrepOptions extends Options {
+public class FastqFormatterOptions extends Options {
 	
 	private static final String INPUT = "in";
 	private static final String OUTPUT = "out";

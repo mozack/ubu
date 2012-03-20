@@ -10,7 +10,7 @@ import java.io.IOException;
  * 
  * @author Lisle Mose (lmose at unc dot edu)
  */
-public class FastqMapsplicePrep {
+public class FastqFormatter {
 
     private FastqInputFile input;
     private FastqOutputFile output;
@@ -18,7 +18,7 @@ public class FastqMapsplicePrep {
     private boolean shouldConvertPhred33To64;
     private boolean shouldStripAfterSpace;
     
-    public FastqMapsplicePrep(FastqMapsplicePrepOptions options) throws FileNotFoundException, IOException {    	
+    public FastqFormatter(FastqFormatterOptions options) throws FileNotFoundException, IOException {    	
     	if (options.hasSuffix()) {
     		this.idSuffix     = options.getSuffix();
     	}
@@ -29,7 +29,7 @@ public class FastqMapsplicePrep {
     	output.init(options.getOutputFile());
     }
 
-    FastqMapsplicePrep(FastqInputFile input, FastqOutputFile output, String idSuffix, boolean shouldStripAfterSpace, boolean shouldConvertPhred33To64) {
+    FastqFormatter(FastqInputFile input, FastqOutputFile output, String idSuffix, boolean shouldStripAfterSpace, boolean shouldConvertPhred33To64) {
         this.input = input;
         this.output = output;
         this.idSuffix = idSuffix;
@@ -70,11 +70,11 @@ public class FastqMapsplicePrep {
     }
     
     public static void run(String[] args) throws IOException {
-    	FastqMapsplicePrepOptions options = new FastqMapsplicePrepOptions();
+    	FastqFormatterOptions options = new FastqFormatterOptions();
     	options.parseOptions(args);
         
     	if (options.isValid()) {
-	        FastqMapsplicePrep prep = new FastqMapsplicePrep(options);
+	        FastqFormatter prep = new FastqFormatter(options);
 	        
 	        prep.process();
     	}

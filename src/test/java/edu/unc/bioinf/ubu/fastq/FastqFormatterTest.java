@@ -8,18 +8,18 @@ import org.easymock.EasyMock;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-public class FastqMapsplicePrepTest {
+public class FastqFormatterTest {
     
     private FastqInputFile input;
     private FastqOutputFile output;
-    private FastqMapsplicePrep mapsplicePrep;
+    private FastqFormatter mapsplicePrep;
     
     @BeforeMethod(groups = "unit")
     @SuppressWarnings("unused")
     private void setUp() {
         input = EasyMock.createMock(FastqInputFile.class);
         output = EasyMock.createMock(FastqOutputFile.class);
-        mapsplicePrep = new FastqMapsplicePrep(input, output, "/1", true, false);
+        mapsplicePrep = new FastqFormatter(input, output, "/1", true, false);
     }
 
     @Test(groups = "unit")
