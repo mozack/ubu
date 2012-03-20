@@ -25,6 +25,8 @@ public class FastqFormatter {
     	
     	this.shouldConvertPhred33To64 = options.shouldConvertPhred33To64();
     	this.shouldStripAfterSpace = options.shouldStripAfterWhitespace();
+    	input = new FastqInputFile();
+    	output = new FastqOutputFile();
     	input.init(options.getInputFile());
     	output.init(options.getOutputFile());
     }
