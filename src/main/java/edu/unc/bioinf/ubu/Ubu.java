@@ -2,7 +2,7 @@ package edu.unc.bioinf.ubu;
 
 import java.util.Arrays;
 
-import edu.unc.bioinf.ubu.fastq.FastqMapsplicePrep;
+import edu.unc.bioinf.ubu.fastq.FastqFormatter;
 import edu.unc.bioinf.ubu.sam.GenomeToTranscriptome;
 import edu.unc.bioinf.ubu.sam.SamFileDiff;
 import edu.unc.bioinf.ubu.sam.SamSummarizer;
@@ -19,7 +19,7 @@ public class Ubu {
 	private static final String SAM_FILTER = "sam-filter";
 	private static final String SAM_SUMMARIZE = "sam-summary";
 	private static final String JUNC = "junc";
-	private static final String MAPSPLICE_PREP = "mapsplice-prep";
+	private static final String FASTQ_FORMAT = "fastq-format";
 	
 	private static final int MAX_CMD_LEN = 15;
 	
@@ -40,8 +40,8 @@ public class Ubu {
 				printNotYetSupported(cmd);
 			} else if (cmd.equals(JUNC)) {
 				printNotYetSupported(cmd);
-			} else if (cmd.equals(MAPSPLICE_PREP)) {
-				FastqMapsplicePrep.run(argz);
+			} else if (cmd.equals(FASTQ_FORMAT)) {
+				FastqFormatter.run(argz);
 			} else if (cmd.equals(SAM_SUMMARIZE)) {
 				SamSummarizer.run(argz);
 			} else {
@@ -64,7 +64,7 @@ public class Ubu {
 		printProgram(getPaddedString(SAM_FILTER), "Filter reads from a SAM or BAM file");
 		printProgram(getPaddedString(SAM_SUMMARIZE), "Output summary statistics per reference for a SAM/BAM file.");
 		printProgram(getPaddedString(JUNC), "Count splice junctions in a SAM or BAM file");
-		printProgram(getPaddedString(MAPSPLICE_PREP), "Prep a single fastq file for Mapsplice (for Casava 1.8 output)");
+		printProgram(getPaddedString(FASTQ_FORMAT), "Format a single FASTQ file (clean up read ids and/or convert quality scoring)");
 	}
 	
 	private String getPaddedString(String str) {
