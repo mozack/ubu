@@ -12,6 +12,8 @@ public class FastqRecord {
     
     public static final int NUM_LINES = 4;
     
+    private static final int PHRED33_TO_PHRED64_DIFF = 31;
+    
     private String[] lines = new String[NUM_LINES];
     
     public FastqRecord(String[] lines) {
@@ -83,5 +85,25 @@ public class FastqRecord {
         if (!lines[0].endsWith(suffix)) {
             lines[0] = lines[0] + suffix;
         }
+    }
+    
+    String getQuality() {
+    	return lines[3];
+    }
+    
+    private void setQuality(String quality) {
+    	lines[3] = quality;
+    }
+    
+    public void phred33To64() {
+    	StringBuffer phred64 = new StringBuffer();
+    	
+    	String phred33 = getQuality();
+    	
+    	for (int i=0; i<phred33.length(); i++) {
+    		phred64.append((char) (phred33.charAt(i) + PHRED33_TO_PHRED64_DIFF));
+    	}
+    	
+    	setQuality(phred64.toString());
     }
 }

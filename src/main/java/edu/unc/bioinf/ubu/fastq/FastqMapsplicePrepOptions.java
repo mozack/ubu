@@ -13,6 +13,8 @@ public class FastqMapsplicePrepOptions extends Options {
 	private static final String INPUT = "in";
 	private static final String OUTPUT = "out";
 	private static final String SUFFIX = "suffix";
+	private static final String PHRED_33_TO_64 = "phred33to64";
+	private static final String STRIP_AFTER_WHITESPACE = "strip";
 
 	private OptionParser parser;
 	private boolean isValid;
@@ -24,6 +26,8 @@ public class FastqMapsplicePrepOptions extends Options {
             parser.accepts(INPUT, "Input FASTQ file").withRequiredArg().ofType(String.class);
             parser.accepts(OUTPUT, "Output FASTQ file").withRequiredArg().ofType(String.class);
             parser.accepts(SUFFIX, "Read suffix (i.e. /1 or /2)").withRequiredArg().ofType(String.class);
+            parser.accepts(PHRED_33_TO_64, "If specified, convert quality from phred33 to phred64");
+            parser.accepts(STRIP_AFTER_WHITESPACE, "Strip spaces and anything following a space from the read id");
             parser.accepts(HELP, "Print this help message");
     	}
     	
@@ -61,10 +65,22 @@ public class FastqMapsplicePrepOptions extends Options {
 	public String getOutputFile() {
 		return (String) getOptions().valueOf(OUTPUT);
 	}
+	
+	public boolean hasSuffix() {
+		return getOptions().has(SUFFIX);
+	}
 
 	public String getSuffix() {
 		return (String) getOptions().valueOf(SUFFIX);
 	}
+	
+	public boolean shouldConvertPhred33To64() {
+		return getOptions().has(PHRED_33_TO_64);
+	}
+	
+	public boolean shouldStripAfterWhitespace() {
+		return getOptions().has(STRIP_AFTER_WHITESPACE);
+	}	
 	
     public boolean isValid() {
         return isValid;

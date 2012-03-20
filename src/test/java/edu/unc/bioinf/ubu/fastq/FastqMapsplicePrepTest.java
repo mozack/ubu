@@ -19,7 +19,7 @@ public class FastqMapsplicePrepTest {
     private void setUp() {
         input = EasyMock.createMock(FastqInputFile.class);
         output = EasyMock.createMock(FastqOutputFile.class);
-        mapsplicePrep = new FastqMapsplicePrep(input, output, "/1");
+        mapsplicePrep = new FastqMapsplicePrep(input, output, "/1", true, false);
     }
 
     @Test(groups = "unit")
@@ -40,10 +40,5 @@ public class FastqMapsplicePrepTest {
         replay(input, output);
         mapsplicePrep.process();
         verify(input, output);
-    }
-    
-    @Test(groups = "unit")
-    public void testProcess_preCasava18() throws Exception {
-        
     }
 }

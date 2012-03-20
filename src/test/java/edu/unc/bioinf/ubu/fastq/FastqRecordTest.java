@@ -14,11 +14,15 @@ import org.testng.annotations.Test;
  */
 public class FastqRecordTest {
     
+	private static final String FASTQ1_QUALITY_PHRED33 = "@@@DDBDDFFFFDEEE";
+	private static final String FASTQ1_QUALITY_PHRED64 = "___ccacceeeecddd";
+	
+	
     private static final String[] FASTQ1 = new String[] {
         "@UNC16-SN851_55:2:1101:1487:1950/1",
         "CAACTAGATCAAAAAT",
         "+",
-        "CCCFFFFEHH"
+        FASTQ1_QUALITY_PHRED33
         };
 
     private static final String[] FASTQ2 = new String[] {
@@ -100,5 +104,14 @@ public class FastqRecordTest {
         FastqRecord rec = new FastqRecord(FASTQ4.clone());
         rec.appendToId("/1");
         assertEquals(rec.getId(), "@UNC15-SN850:105:D047RACXX:1:1101:1242:2131 1:N:0:ATCACG/1");
+    }
+    
+    @Test(groups = "unit")
+    public void testPhred33To64() {
+    	FastqRecord rec = new FastqRecord(FASTQ1.clone());
+    	
+    	assertEquals(FASTQ1_QUALITY_PHRED33, rec.getQuality());
+    	rec.phred33To64();
+    	assertEquals(FASTQ1_QUALITY_PHRED64, rec.getQuality());
     }
 }

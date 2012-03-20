@@ -15,17 +15,26 @@ public class FastqMapsplicePrep {
     private FastqInputFile input;
     private FastqOutputFile output;
     private String idSuffix;
+    private boolean shouldConvertPhred33To64;
+    private boolean shouldStripAfterSpace;
     
-    public FastqMapsplicePrep(String inputFile, String outputfile, String idSuffix) throws FileNotFoundException, IOException {
-        this(new FastqInputFile(), new FastqOutputFile(), idSuffix); 
-        input.init(inputFile);
-        output.init(outputfile);
+    public FastqMapsplicePrep(FastqMapsplicePrepOptions options) throws FileNotFoundException, IOException {    	
+    	if (options.hasSuffix()) {
+    		this.idSuffix     = options.getSuffix();
+    	}
+    	
+    	this.shouldConvertPhred33To64 = options.shouldConvertPhred33To64();
+    	this.shouldStripAfterSpace = options.shouldStripAfterWhitespace();
+    	input.init(options.getInputFile());
+    	output.init(options.getOutputFile());
     }
-    
-    FastqMapsplicePrep(FastqInputFile input, FastqOutputFile output, String idSuffix) {
+
+    FastqMapsplicePrep(FastqInputFile input, FastqOutputFile output, String idSuffix, boolean shouldStripAfterSpace, boolean shouldConvertPhred33To64) {
         this.input = input;
         this.output = output;
         this.idSuffix = idSuffix;
+        this.shouldConvertPhred33To64 = shouldConvertPhred33To64;
+        this.shouldStripAfterSpace = shouldStripAfterSpace;
     }
     
     public void process() throws IOException {
@@ -34,8 +43,18 @@ public class FastqMapsplicePrep {
         int count = 0;
         
         while (rec != null) {
-            rec.stripNonReadInfoInId();
-            rec.appendToId(idSuffix);
+        	if (shouldStripAfterSpace) {
+        		rec.stripNonReadInfoInId();
+        	}
+        	
+        	if (idSuffix != null) {
+        		rec.appendToId(idSuffix);
+        	}
+        	
+        	if (shouldConvertPhred33To64) {
+        		rec.phred33To64();
+        	}
+        	
             output.write(rec);
             rec = input.getNextRecord();
             
@@ -55,28 +74,9 @@ public class FastqMapsplicePrep {
     	options.parseOptions(args);
         
     	if (options.isValid()) {
-	        FastqMapsplicePrep prep = new FastqMapsplicePrep(options.getInputFile(), options.getOutputFile(),
-	        		options.getSuffix());
+	        FastqMapsplicePrep prep = new FastqMapsplicePrep(options);
 	        
 	        prep.process();
     	}
-    }
-    
-    /*
-    public static void main(String[] args) throws IOException {
-//        String input = "/home/lisle/mapsplice12/out.fastq";
-//        String output = "/home/lisle/mapsplice12/out2.fastq";
-//        String suffix = "/1";
-        
-//        if (args.length != 3) {
-//            System.out.println("Usage: FastqMapsplicePrep <input_file> <output_file> <suffix>");
-//            System.exit(-1);
-//        }
-//        
-//        String input = args[0];
-//        String output = args[1];
-//        String suffix = args[2];
-    	
-    }
-    */
+    }    
 }
