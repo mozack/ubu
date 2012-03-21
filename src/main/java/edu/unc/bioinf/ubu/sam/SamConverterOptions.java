@@ -11,7 +11,7 @@ import joptsimple.OptionParser;
 public class SamConverterOptions extends Options {
 	private static final String INPUT  = "in";
 	private static final String OUTPUT = "out";
-	private static final String PHRED64_TO_PHRED33 = "phred64To33";
+	private static final String PHRED64_TO_PHRED33 = "phred64to33";
 
 	private OptionParser parser;
 	private boolean isValid;
