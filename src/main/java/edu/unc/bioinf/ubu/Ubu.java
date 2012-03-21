@@ -5,6 +5,7 @@ import java.util.Arrays;
 import edu.unc.bioinf.ubu.fastq.FastqFormatter;
 import edu.unc.bioinf.ubu.sam.GenomeToTranscriptome;
 import edu.unc.bioinf.ubu.sam.SAMFilter;
+import edu.unc.bioinf.ubu.sam.SamConverter;
 import edu.unc.bioinf.ubu.sam.SamFileDiff;
 import edu.unc.bioinf.ubu.sam.SamSummarizer;
 import edu.unc.bioinf.ubu.sam.SpliceJunctionCounter;
@@ -20,6 +21,7 @@ public class Ubu {
 	private static final String SAM_DIFF = "sam-diff";
 	private static final String SAM_FILTER = "sam-filter";
 	private static final String SAM_SUMMARIZE = "sam-summary";
+	private static final String SAM_CONVERT = "sam-convert";
 	private static final String JUNC = "junc";
 	private static final String FASTQ_FORMAT = "fastq-format";
 	
@@ -46,6 +48,8 @@ public class Ubu {
 				FastqFormatter.run(argz);
 			} else if (cmd.equals(SAM_SUMMARIZE)) {
 				SamSummarizer.run(argz);
+			} else if (cmd.equals(SAM_CONVERT)) {
+				SamConverter.run(argz);
 			} else {
 				System.out.println("Command [" + cmd + "] is unrecognized.");
 				printAvailablePrograms();
@@ -61,6 +65,7 @@ public class Ubu {
 		printProgram(getPaddedString(SAM_DIFF), "Diff two SAM/BAM files outputting discrepant reads in corresponding SAM/BAM files");
 		printProgram(getPaddedString(SAM_FILTER), "Filter reads from a SAM or BAM file");
 		printProgram(getPaddedString(SAM_SUMMARIZE), "Output summary statistics per reference for a SAM/BAM file.");
+		printProgram(getPaddedString(SAM_CONVERT), "Convert SAM/BAM file content (i.e. convert quality from phred64 to phred33)");
 		printProgram(getPaddedString(JUNC), "Count splice junctions in a SAM or BAM file");
 		printProgram(getPaddedString(FASTQ_FORMAT), "Format a single FASTQ file (clean up read ids and/or convert quality scoring)");
 	}
