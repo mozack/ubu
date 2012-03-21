@@ -39,7 +39,7 @@ public class SamFilterOptions extends Options {
             System.err.println("Missing required output SAM/BAM file");
         }
         
-        if ((!getOptions().hasArgument(STRIP_INDELS)) && (!getOptions().hasArgument(MAX_INSERT_LEN))) {
+        if ((!getOptions().has(STRIP_INDELS)) && (!getOptions().hasArgument(MAX_INSERT_LEN))) {
         	isValid = false;
         	System.err.println("At least one filtering option must be specified");
         }
@@ -58,7 +58,7 @@ public class SamFilterOptions extends Options {
 	}
 	
 	public boolean shouldStripIndels() {
-		return getOptions().hasArgument(STRIP_INDELS);
+		return getOptions().has(STRIP_INDELS);
 	}
 	
 	public int getMaxInsertLen() {
