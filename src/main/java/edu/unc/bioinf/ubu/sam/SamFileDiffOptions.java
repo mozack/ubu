@@ -27,8 +27,7 @@ public class SamFileDiffOptions extends Options {
             parser.accepts(INPUT2, "Input SAM/BAM file 2").withRequiredArg().ofType(String.class);
             parser.accepts(OUTPUT1, "Output SAM/BAM file containing reads unique to input file 1").withRequiredArg().ofType(String.class);
             parser.accepts(OUTPUT2, "Output SAM/BAM file containing reads unique to input file 2").withRequiredArg().ofType(String.class);
-            parser.accepts(READ_ID_ONLY, "If specified, compare read id only.  Otherwise, entire read is compared.  " +
-            		"In case of multi-mappings, this is an \"all or nothing\" comparison.");
+            parser.accepts(READ_ID_ONLY, "If specified, compare read id only.  Otherwise, entire read is compared");
             parser.accepts(HELP, "Print this help message");
     	}
     	
