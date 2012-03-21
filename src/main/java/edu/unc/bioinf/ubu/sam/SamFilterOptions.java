@@ -36,7 +36,7 @@ public class SamFilterOptions extends Options {
         
         if (!getOptions().hasArgument(OUTPUT_FILE)) {
             isValid = false;
-            System.err.println("Missing required output summary file");
+            System.err.println("Missing required output SAM/BAM file");
         }
         
         if ((!getOptions().hasArgument(STRIP_INDELS)) && (!getOptions().hasArgument(MAX_INSERT_LEN))) {
