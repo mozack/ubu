@@ -14,7 +14,7 @@ public class SamFileDiffOptions extends Options {
 	private static final String INPUT2  = "in2";
 	private static final String OUTPUT1 = "out1";
 	private static final String OUTPUT2 = "out2";
-	private static final String READ_ID_ONLY = "ids";
+	private static final String READ_ID_ONLY = "ids-only";
 
 	private OptionParser parser;
 	private boolean isValid;
