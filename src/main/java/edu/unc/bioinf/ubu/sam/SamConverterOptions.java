@@ -43,7 +43,7 @@ public class SamConverterOptions extends Options {
             System.err.println("Missing required output SAM/BAM file");
         }
         
-        if (!getOptions().hasArgument(PHRED64_TO_PHRED33)) {
+        if (!getOptions().has(PHRED64_TO_PHRED33)) {
             isValid = false;
             System.err.println("No conversion options specified.");
         }
@@ -62,7 +62,7 @@ public class SamConverterOptions extends Options {
 	}
 
 	public boolean shouldConvertPhred64toPhred33() {
-		return getOptions().hasArgument(PHRED64_TO_PHRED33);
+		return getOptions().has(PHRED64_TO_PHRED33);
 	}
 		
     public boolean isValid() {
