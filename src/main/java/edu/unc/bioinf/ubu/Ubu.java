@@ -7,6 +7,7 @@ import edu.unc.bioinf.ubu.sam.GenomeToTranscriptome;
 import edu.unc.bioinf.ubu.sam.SAMFilter;
 import edu.unc.bioinf.ubu.sam.SamFileDiff;
 import edu.unc.bioinf.ubu.sam.SamSummarizer;
+import edu.unc.bioinf.ubu.sam.SpliceJunctionCounter;
 
 /**
  * Entry point for Ubu java command line utilities
@@ -40,7 +41,7 @@ public class Ubu {
 			} else if (cmd.equals(SAM_FILTER)) {
 				SAMFilter.run(argz);
 			} else if (cmd.equals(JUNC)) {
-				printNotYetSupported(cmd);
+				SpliceJunctionCounter.run(argz);
 			} else if (cmd.equals(FASTQ_FORMAT)) {
 				FastqFormatter.run(argz);
 			} else if (cmd.equals(SAM_SUMMARIZE)) {
@@ -52,16 +53,12 @@ public class Ubu {
 		}
 	}
 	
-	private void printNotYetSupported(String cmd) {
-		System.out.println("Sorry, [" + cmd + "] is not yet supported.  Check back soon.");
-	}
-	
 	private void printAvailablePrograms() {
 		System.out.println("UNC-Chapel Hill Bioinformatics Utilities");
 		System.out.println("Available commands:");
 		
 		printProgram(getPaddedString(TRANSLATE), "Translate from genome to transcriptome coordinates");
-		printProgram(getPaddedString(SAM_DIFF), "Diff two SAM/BAM files outputting discrepancies in corresponding SAM/BAM files");
+		printProgram(getPaddedString(SAM_DIFF), "Diff two SAM/BAM files outputting discrepant reads in corresponding SAM/BAM files");
 		printProgram(getPaddedString(SAM_FILTER), "Filter reads from a SAM or BAM file");
 		printProgram(getPaddedString(SAM_SUMMARIZE), "Output summary statistics per reference for a SAM/BAM file.");
 		printProgram(getPaddedString(JUNC), "Count splice junctions in a SAM or BAM file");

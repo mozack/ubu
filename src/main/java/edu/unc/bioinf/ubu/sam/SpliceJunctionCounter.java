@@ -28,8 +28,6 @@ public class SpliceJunctionCounter {
     
     public void count(String inputFile, String outputFile) throws IOException {
         
-        long start = System.currentTimeMillis();
-        
         BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile, false));
         
         File file = new File(inputFile);
@@ -48,10 +46,6 @@ public class SpliceJunctionCounter {
                 
         outputCounts(writer);
         writer.close();
-        
-        long stop = System.currentTimeMillis();
-        
-        System.out.println("Done.  Elapsed secs: " + (stop-start)/1000);
     }
     
     private void outputCounts(BufferedWriter writer) throws IOException {
@@ -89,6 +83,24 @@ public class SpliceJunctionCounter {
                 }
             }
         }
+    }
+    
+    public static void run(String[] args) throws IOException {
+    	SpliceJunctionCounterOptions options = new SpliceJunctionCounterOptions();
+    	options.parseOptions(args);
+    	
+    	if (options.isValid()) {
+    		
+            long start = System.currentTimeMillis();
+            
+    		SpliceJunctionMap map = new SpliceJunctionMap(options.getJunctionFile());
+    		SpliceJunctionCounter counter = new SpliceJunctionCounter(map);
+    		counter.count(options.getInputFile(), options.getOutputFile());
+    		
+            long stop = System.currentTimeMillis();
+            
+            System.out.println("Done.  Elapsed secs: " + (stop-start)/1000);
+    	}
     }
     
     public static void main(String[] args) throws Exception {
