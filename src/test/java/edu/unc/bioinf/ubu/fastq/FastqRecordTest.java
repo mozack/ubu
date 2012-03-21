@@ -7,6 +7,8 @@ import static org.testng.Assert.fail;
 
 import org.testng.annotations.Test;
 
+import edu.unc.bioinf.ubu.util.QualityConverter;
+
 /**
  * Unit tests for {@code FastqRecord}
  * 
@@ -109,6 +111,7 @@ public class FastqRecordTest {
     @Test(groups = "unit")
     public void testPhred33To64() {
     	FastqRecord rec = new FastqRecord(FASTQ1.clone());
+    	rec.setQualityConverter(new QualityConverter());
     	
     	assertEquals(FASTQ1_QUALITY_PHRED33, rec.getQuality());
     	rec.phred33To64();

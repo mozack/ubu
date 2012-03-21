@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import edu.unc.bioinf.ubu.util.QualityConverter;
+
 /**
  * Handles reading FastqRecords from file.
  * 
@@ -20,6 +22,7 @@ public class FastqInputFile {
     private Map<Integer, FastqRecord> records = new HashMap<Integer, FastqRecord>();
     private int recordNum = 0;
     private int maxCachedLines;
+    private QualityConverter qualityConverter = new QualityConverter();
     
     public void init(String filename, int maxCachedLines) throws FileNotFoundException {
         openFile(filename);
@@ -45,7 +48,9 @@ public class FastqInputFile {
             lines[i] = line;
         }
         
-        return new FastqRecord(lines);
+        FastqRecord fastqRecord = new FastqRecord(lines);
+        fastqRecord.setQualityConverter(qualityConverter);
+        return fastqRecord;
     }
     
     /**

@@ -2,6 +2,8 @@ package edu.unc.bioinf.ubu.fastq;
 
 import java.util.Arrays;
 
+import edu.unc.bioinf.ubu.util.QualityConverter;
+
 /**
  * Representation of a single Fastq record.
  * Some code here may be specific to paired end processing.
@@ -12,9 +14,9 @@ public class FastqRecord {
     
     public static final int NUM_LINES = 4;
     
-    private static final int PHRED33_TO_PHRED64_DIFF = 31;
-    
     private String[] lines = new String[NUM_LINES];
+    
+    private QualityConverter qualityConverter;
     
     public FastqRecord(String[] lines) {
         if (lines.length != NUM_LINES) {
@@ -29,6 +31,10 @@ public class FastqRecord {
     
     public String[] getLines() {
         return lines;
+    }
+    
+    public void setQualityConverter(QualityConverter qualityConverter) {
+    	this.qualityConverter = qualityConverter;
     }
     
     /**
@@ -96,14 +102,13 @@ public class FastqRecord {
     }
     
     public void phred33To64() {
-    	StringBuffer phred64 = new StringBuffer();
     	
-    	String phred33 = getQuality();
-    	
-    	for (int i=0; i<phred33.length(); i++) {
-    		phred64.append((char) (phred33.charAt(i) + PHRED33_TO_PHRED64_DIFF));
+    	if (qualityConverter == null) {
+    		throw new RuntimeException("Please set QualityConverter.");
     	}
     	
-    	setQuality(phred64.toString());
+    	String phred33 = getQuality();
+    	    	
+    	setQuality(qualityConverter.phred33ToPhred64(phred33));
     }
 }
