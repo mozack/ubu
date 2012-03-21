@@ -37,6 +37,8 @@ public class SamFileDiff {
 	private List<SAMRecord> cachedReadList2;
 	private Iterator<List<SAMRecord>> iter1;
 	private Iterator<List<SAMRecord>> iter2;
+	
+	private boolean isReadIdComparisonOnly;
 
 	public void diff(String samInputFileName1, String samInputFileName2, String samOutputFileName1, String samOutputFileName2) {
 		
@@ -70,10 +72,12 @@ public class SamFileDiff {
         		addAlignments(out2, readList2);
         		this.cachedReadList1 = readList1;
         	} else {
-        		diffReadLists(readList1, readList2, out1, out2);
+        		if (!isReadIdComparisonOnly) {
+        			diffReadLists(readList1, readList2, out1, out2);
+        		}
         	}
         }
-        
+
         while (hasNextList1()) {
         	addAlignments(out1, getNextList1());
         }
@@ -84,6 +88,10 @@ public class SamFileDiff {
         
         out1.close();
         out2.close();
+	}
+	
+	public void setReadIdComparisonOnly(boolean isReadIdComparisonOnly) {
+		this.isReadIdComparisonOnly = isReadIdComparisonOnly;
 	}
 	
 	private void addAlignments(SAMFileWriter out, List<SAMRecord> reads) {
@@ -242,7 +250,11 @@ public class SamFileDiff {
 			
 			long s = System.currentTimeMillis();
 			
-			new SamFileDiff().diff(options.getInput1File(), options.getInput2File(),
+			SamFileDiff diff = new SamFileDiff();
+			
+			diff.setReadIdComparisonOnly(options.isReadIdComparisonOnly());
+			
+			diff.diff(options.getInput1File(), options.getInput2File(),
 					options.getOutput1File(), options.getOutput2File());
 			
 			long e = System.currentTimeMillis();

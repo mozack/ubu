@@ -14,6 +14,7 @@ public class SamFileDiffOptions extends Options {
 	private static final String INPUT2  = "in2";
 	private static final String OUTPUT1 = "out1";
 	private static final String OUTPUT2 = "out2";
+	private static final String READ_ID_ONLY = "ids";
 
 	private OptionParser parser;
 	private boolean isValid;
@@ -26,6 +27,8 @@ public class SamFileDiffOptions extends Options {
             parser.accepts(INPUT2, "Input SAM/BAM file 2").withRequiredArg().ofType(String.class);
             parser.accepts(OUTPUT1, "Output SAM/BAM file containing reads unique to input file 1").withRequiredArg().ofType(String.class);
             parser.accepts(OUTPUT2, "Output SAM/BAM file containing reads unique to input file 2").withRequiredArg().ofType(String.class);
+            parser.accepts(READ_ID_ONLY, "If specified, compare read id only.  Otherwise, entire read is compared.  " +
+            		"In case of multi-mappings, this is an \"all or nothing\" comparison.");
             parser.accepts(HELP, "Print this help message");
     	}
     	
@@ -75,6 +78,10 @@ public class SamFileDiffOptions extends Options {
 	
 	public String getOutput2File() {
 		return (String) getOptions().valueOf(OUTPUT2);
+	}
+	
+	public boolean isReadIdComparisonOnly() {
+		return getOptions().has(READ_ID_ONLY);
 	}
 	
     public boolean isValid() {
