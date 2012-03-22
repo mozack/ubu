@@ -23,8 +23,8 @@ public class SamFileDiffOptions extends Options {
 	protected OptionParser getOptionParser() {
     	if (parser == null) {
             parser = new OptionParser();
-            parser.accepts(INPUT1, "Input SAM/BAM file 1").withRequiredArg().ofType(String.class);
-            parser.accepts(INPUT2, "Input SAM/BAM file 2").withRequiredArg().ofType(String.class);
+            parser.accepts(INPUT1, "Input SAM/BAM file 1 sorted by read").withRequiredArg().ofType(String.class);
+            parser.accepts(INPUT2, "Input SAM/BAM file 2 sorted by read").withRequiredArg().ofType(String.class);
             parser.accepts(OUTPUT1, "Output SAM/BAM file containing reads unique to input file 1").withRequiredArg().ofType(String.class);
             parser.accepts(OUTPUT2, "Output SAM/BAM file containing reads unique to input file 2").withRequiredArg().ofType(String.class);
             parser.accepts(READ_ID_ONLY, "If specified, compare read id only.  Otherwise, entire read is compared");
