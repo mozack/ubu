@@ -8,6 +8,7 @@ public class SamFilterOptions extends Options {
     private static final String OUTPUT_FILE = "out";
     private static final String STRIP_INDELS = "strip-indels";
     private static final String MAX_INSERT_LEN = "max-insert";
+    private static final String MAPPING_QUALITY = "mapq";
     
 	private OptionParser parser;
 	private boolean isValid;
@@ -20,6 +21,7 @@ public class SamFilterOptions extends Options {
             parser.accepts(OUTPUT_FILE, "Required output sam or bam file").withRequiredArg().ofType(String.class);
             parser.accepts(STRIP_INDELS, "If specified, discard read pairs containing indels from output (default off)");
             parser.accepts(MAX_INSERT_LEN, "If specified, discard clusters greater than specified insert length").withRequiredArg().ofType(Integer.class);
+            parser.accepts(MAPPING_QUALITY, "If specified, discard clusters with mapping quality less than the specified value").withRequiredArg().ofType(Integer.class);
     	}
     	
     	return parser;
@@ -39,7 +41,7 @@ public class SamFilterOptions extends Options {
             System.err.println("Missing required output SAM/BAM file");
         }
         
-        if ((!getOptions().has(STRIP_INDELS)) && (!getOptions().hasArgument(MAX_INSERT_LEN))) {
+        if ((!getOptions().has(STRIP_INDELS)) && (!getOptions().hasArgument(MAX_INSERT_LEN)) && (!getOptions().hasArgument(MAPPING_QUALITY))) {
         	isValid = false;
         	System.err.println("At least one filtering option must be specified");
         }
@@ -71,8 +73,17 @@ public class SamFilterOptions extends Options {
 		return maxLen;
 	}
 	
+	public int getMinMappingQuality() {
+		int minMapQ = -1;
+		
+		if (getOptions().hasArgument(MAPPING_QUALITY)) {
+			minMapQ = (Integer) getOptions().valueOf(MAPPING_QUALITY);
+		}
+
+		return minMapQ;
+	}
+	
     public boolean isValid() {
         return isValid;
     }
-
 }

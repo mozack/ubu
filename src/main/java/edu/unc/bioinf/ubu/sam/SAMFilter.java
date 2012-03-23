@@ -19,6 +19,7 @@ public class SAMFilter {
     
     private boolean shouldStripIndels = false;
     private int     maxInsertLen = -1;
+    private int     minMappingQuality = -1;
 
     public void filter(String input, String output) {
         File outputFile = new File(output);
@@ -37,6 +38,10 @@ public class SAMFilter {
                 isPairIncluded = !isMaxInsertLenExceeded(read1, read2);
             }
             
+            if (isPairIncluded) {
+            	isPairIncluded = !isBelowMinMappingQuality(read1, read2);
+            }
+            
             // Output only the pairs that have passed our tests
             if (isPairIncluded) {
                 writer.addAlignment(read1);
@@ -46,6 +51,18 @@ public class SAMFilter {
         
         writer.close();
         reader.close();
+    }
+    
+    private boolean isBelowMinMappingQuality(SAMRecord read1, SAMRecord read2) {
+    	boolean isBelowMin = false;
+    	
+    	if (isMinMappingQualitySpecified()) {
+    		isBelowMin = 
+    			(read1.getMappingQuality() < minMappingQuality) ||
+    			(read2.getMappingQuality() < minMappingQuality);
+    	}
+    	
+    	return isBelowMin;
     }
     
     private boolean isMaxInsertLenExceeded(SAMRecord read1, SAMRecord read2) {
@@ -66,6 +83,14 @@ public class SAMFilter {
     
     private boolean isMaxInsertLenSpecified() {
         return maxInsertLen > 0;
+    }
+    
+    private void setMinMappingQuality(int min) {
+    	minMappingQuality = min;
+    }
+    
+    private boolean isMinMappingQualitySpecified() {
+    	return minMappingQuality > 0;
     }
     
     private boolean hasIndels(SAMRecord read1, SAMRecord read2) {
@@ -95,7 +120,9 @@ public class SAMFilter {
     		long s = System.currentTimeMillis();
     		
     		SAMFilter filter = new SAMFilter();
+    		
     		filter.setMaxInsertLen(options.getMaxInsertLen());
+    		filter.setMinMappingQuality(options.getMinMappingQuality());
     		filter.setShouldStripIndels(options.shouldStripIndels());
     		filter.filter(options.getInputFile(), options.getOutputFile());
     		
