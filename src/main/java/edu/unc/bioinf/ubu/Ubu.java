@@ -63,7 +63,7 @@ public class Ubu {
 		
 		printProgram(getPaddedString(TRANSLATE), "Translate from genome to transcriptome coordinates");
 		printProgram(getPaddedString(SAM_DIFF), "Diff two SAM/BAM files outputting discrepant reads in corresponding SAM/BAM files");
-		printProgram(getPaddedString(SAM_FILTER), "Filter reads from a SAM or BAM file");
+		printProgram(getPaddedString(SAM_FILTER), "Filter reads from a SAM or BAM file (only outputs paired reads)");
 		printProgram(getPaddedString(SAM_SUMMARIZE), "Output summary statistics per reference for a SAM/BAM file (Aligned reads only).");
 		printProgram(getPaddedString(SAM_CONVERT), "Convert SAM/BAM file content (i.e. convert quality from phred64 to phred33)");
 		printProgram(getPaddedString(JUNC), "Count splice junctions in a SAM or BAM file");
