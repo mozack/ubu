@@ -33,7 +33,7 @@ print "Using temp dir: $tdir\n";
 mkpath($tdir, { mode => 0775 }) or die "$! Unable to create $tdir"; 
 
 # Get sequence references from sam file
-my $references_str = `samtools view -H $input_bam | grep \@SQ | cut -f 2 | cut -d : -f 2` or die $!;
+my $references_str = `$samtools_exec view -H $input_bam | grep \@SQ | cut -f 2 | cut -d : -f 2` or die $!;
 
 my @references = split(/\n/,$references_str);
 
@@ -44,7 +44,7 @@ foreach (@references) {
 	my $reference = $_;
 	print scalar(localtime) . " Sorting $reference\n";
 	my $sorted_file = "$tdir/$reference";
-	my $command = "samtools view -b $input_bam $reference | samtools sort -n - $sorted_file";
+	my $command = "$samtools_exec view -b $input_bam $reference | $samtools_exec sort -m 3000000000 -n - $sorted_file";
 	print "$command\n"; 
 	my $ret = system($command);
 	print "retVal: $ret\n"; 
@@ -53,7 +53,7 @@ foreach (@references) {
 }
 
 # Concatenate the sorted bam files
-my $command = "samtools cat -o $output_bam $sorted_files";
+my $command = "$samtools_exec cat -o $output_bam $sorted_files";
 print "$command\n";
 my $ret = system($command);
 print "last retVal: $ret\n";
