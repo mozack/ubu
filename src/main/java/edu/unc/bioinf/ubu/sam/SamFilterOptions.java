@@ -9,6 +9,7 @@ public class SamFilterOptions extends Options {
     private static final String STRIP_INDELS = "strip-indels";
     private static final String MAX_INSERT_LEN = "max-insert";
     private static final String MAPPING_QUALITY = "mapq";
+    private static final String SINGLE_END = "single";
     
 	private OptionParser parser;
 	private boolean isValid;
@@ -19,6 +20,7 @@ public class SamFilterOptions extends Options {
             parser = new OptionParser();
             parser.accepts(INPUT_FILE, "Required input sam or bam file").withRequiredArg().ofType(String.class);
             parser.accepts(OUTPUT_FILE, "Required output sam or bam file").withRequiredArg().ofType(String.class);
+            parser.accepts(SINGLE_END, "If specified, process bam as single end, discarding reads independently (default paired end)");
             parser.accepts(STRIP_INDELS, "If specified, discard read pairs containing indels from output (default off)");
             parser.accepts(MAX_INSERT_LEN, "If specified, discard clusters greater than specified insert length").withRequiredArg().ofType(Integer.class);
             parser.accepts(MAPPING_QUALITY, "If specified, discard clusters with mapping quality less than the specified value").withRequiredArg().ofType(Integer.class);
@@ -61,6 +63,10 @@ public class SamFilterOptions extends Options {
 	
 	public boolean shouldStripIndels() {
 		return getOptions().has(STRIP_INDELS);
+	}
+	
+	public boolean isPairedEnd() {
+		return !getOptions().has(SINGLE_END);
 	}
 	
 	public int getMaxInsertLen() {

@@ -5,23 +5,36 @@ import java.io.IOException;
 
 import net.sf.samtools.CigarElement;
 import net.sf.samtools.CigarOperator;
+import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMFileWriter;
 import net.sf.samtools.SAMFileWriterFactory;
 import net.sf.samtools.SAMRecord;
 
 /**
- * Filters paired reads from a SAM or BAM file.  Indels and/or clusters
- * greater than a specified insert length may be filtered.
+ * Filters reads from a SAM or BAM file.  For paired end, read pairs are filtered.
+ * Candidates for filtering include:<br/>
+ * Indels<br/>
+ * Clusters greater than a specified insert length<br/>
+ * Reads with low mapping quality<br/>
  * 
  * @author Lisle Mose (lmose at unc dot edu)
  */
 public class SAMFilter {
     
+	private boolean isPairedEnd = true;
     private boolean shouldStripIndels = false;
     private int     maxInsertLen = -1;
     private int     minMappingQuality = -1;
 
     public void filter(String input, String output) {
+    	if (isPairedEnd) {
+    		filterPairedEnd(input, output);
+    	} else {
+    		filterSingleEnd(input, output);
+    	}
+    }
+    
+    private void filterPairedEnd(String input, String output) {
         File outputFile = new File(output);
         SamReadPairReader reader = new SamReadPairReader(input);
         
@@ -29,23 +42,10 @@ public class SAMFilter {
                 false, outputFile);
         
         for (ReadPair pair : reader) {
-            SAMRecord read1 = pair.getRead1();
-            SAMRecord read2 = pair.getRead2();
-            
-            boolean isPairIncluded = !shouldStripIndels || !hasIndels(read1, read2);
-            
-            if (isPairIncluded) {
-                isPairIncluded = !isMaxInsertLenExceeded(read1, read2);
-            }
-            
-            if (isPairIncluded) {
-            	isPairIncluded = !isBelowMinMappingQuality(read1, read2);
-            }
-            
             // Output only the pairs that have passed our tests
-            if (isPairIncluded) {
-                writer.addAlignment(read1);
-                writer.addAlignment(read2);
+            if (isReadPairIncluded(pair)) {
+                writer.addAlignment(pair.getRead1());
+                writer.addAlignment(pair.getRead2());
             }
         }
         
@@ -53,31 +53,60 @@ public class SAMFilter {
         reader.close();
     }
     
-    private boolean isBelowMinMappingQuality(SAMRecord read1, SAMRecord read2) {
+    private void filterSingleEnd(String input, String output) {
+        File outputFile = new File(output);
+        SAMFileReader reader = new SAMFileReader(new File(input));
+        
+        final SAMFileWriter writer = new SAMFileWriterFactory().makeSAMOrBAMWriter(reader.getFileHeader(),
+                false, outputFile);
+        
+        for (SAMRecord read : reader) {
+            // Output only the pairs that have passed our tests
+            if (isReadIncluded(read)) {
+                writer.addAlignment(read);
+            }
+        }
+        
+        writer.close();
+        reader.close();
+    }
+    
+    boolean isReadPairIncluded(ReadPair pair) {
+    	if (!isPairedEnd) {
+    		throw new UnsupportedOperationException("Invalid call to isReadPairIncluded for single end filtering.");
+    	}
+    	
+    	return isReadIncluded(pair.getRead1()) && isReadIncluded(pair.getRead2());
+    }
+    
+    boolean isReadIncluded(SAMRecord read) {
+    	return
+    		((!hasIndel(read)) &&
+    		 (!isMaxInsertLenExceeded(read)) &&
+    		 (!isBelowMinMappingQuality(read)));
+    }
+    
+    private boolean isBelowMinMappingQuality(SAMRecord read) {
     	boolean isBelowMin = false;
     	
     	if (isMinMappingQualitySpecified()) {
-    		isBelowMin = 
-    			(read1.getMappingQuality() < minMappingQuality) ||
-    			(read2.getMappingQuality() < minMappingQuality);
+    		isBelowMin = (read.getMappingQuality() < minMappingQuality);
     	}
     	
     	return isBelowMin;
     }
     
-    private boolean isMaxInsertLenExceeded(SAMRecord read1, SAMRecord read2) {
+    private boolean isMaxInsertLenExceeded(SAMRecord read) {
         boolean isMaxExceeded = false;
         
         if (isMaxInsertLenSpecified()) {
-            isMaxExceeded = 
-                (Math.abs(read1.getInferredInsertSize()) > maxInsertLen) &&
-                (Math.abs(read2.getInferredInsertSize()) > maxInsertLen);
+            isMaxExceeded = (Math.abs(read.getInferredInsertSize()) > maxInsertLen);
         }
         
         return isMaxExceeded;
     }
     
-    private void setMaxInsertLen(int len) {
+    public void setMaxInsertLen(int len) {
         maxInsertLen = len;
     }
     
@@ -85,7 +114,7 @@ public class SAMFilter {
         return maxInsertLen > 0;
     }
     
-    private void setMinMappingQuality(int min) {
+    public void setMinMappingQuality(int min) {
     	minMappingQuality = min;
     }
     
@@ -93,21 +122,23 @@ public class SAMFilter {
     	return minMappingQuality > 0;
     }
     
-    private boolean hasIndels(SAMRecord read1, SAMRecord read2) {
-        return ( (hasIndel(read1)) || (hasIndel(read2)) );
-    }
-    
     public void setShouldStripIndels(boolean shouldStripIndels) {
         this.shouldStripIndels = true;
     }
     
-    private boolean hasIndel(SAMRecord read) {
-        for (CigarElement element : read.getCigar().getCigarElements()) {
-            if ((element.getOperator() == CigarOperator.D) ||
-                (element.getOperator() == CigarOperator.I)) {
-                return true;
-            }
-        }
+    public void setPairedEnd(boolean isPairedEnd) {
+		this.isPairedEnd = isPairedEnd;
+	}
+
+	private boolean hasIndel(SAMRecord read) {
+    	if (shouldStripIndels) {
+	        for (CigarElement element : read.getCigar().getCigarElements()) {
+	            if ((element.getOperator() == CigarOperator.D) ||
+	                (element.getOperator() == CigarOperator.I)) {
+	                return true;
+	            }
+	        }
+    	}
         
         return false;
     }
@@ -121,6 +152,7 @@ public class SAMFilter {
     		
     		SAMFilter filter = new SAMFilter();
     		
+    		filter.setPairedEnd(options.isPairedEnd());
     		filter.setMaxInsertLen(options.getMaxInsertLen());
     		filter.setMinMappingQuality(options.getMinMappingQuality());
     		filter.setShouldStripIndels(options.shouldStripIndels());
