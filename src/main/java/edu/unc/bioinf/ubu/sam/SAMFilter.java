@@ -39,7 +39,7 @@ public class SAMFilter {
         SamReadPairReader reader = new SamReadPairReader(input);
         
         final SAMFileWriter writer = new SAMFileWriterFactory().makeSAMOrBAMWriter(reader.getHeader(),
-                false, outputFile);
+                true, outputFile);
         
         for (ReadPair pair : reader) {
             // Output only the pairs that have passed our tests
@@ -58,7 +58,7 @@ public class SAMFilter {
         SAMFileReader reader = new SAMFileReader(new File(input));
         
         final SAMFileWriter writer = new SAMFileWriterFactory().makeSAMOrBAMWriter(reader.getFileHeader(),
-                false, outputFile);
+                true, outputFile);
         
         int cnt = 0;
         for (SAMRecord read : reader) {
