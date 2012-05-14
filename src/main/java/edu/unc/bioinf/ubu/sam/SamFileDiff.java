@@ -6,8 +6,11 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
+import javax.swing.SortOrder;
+
 import org.apache.commons.lang.StringUtils;
 
+import net.sf.samtools.SAMFileHeader;
 import net.sf.samtools.SAMFileWriter;
 import net.sf.samtools.SAMFileWriterFactory;
 import net.sf.samtools.SAMRecord;
@@ -50,10 +53,15 @@ public class SamFileDiff {
 		SamMultiMappingReader in1 = new SamMultiMappingReader(samInputFileName1);
 		SamMultiMappingReader in2 = new SamMultiMappingReader(samInputFileName2);
 		
-        final SAMFileWriter out1 = new SAMFileWriterFactory().makeSAMOrBAMWriter(in1.getFileHeader(),
+		SAMFileHeader header1 = in1.getFileHeader();
+		header1.setSortOrder(SAMFileHeader.SortOrder.unsorted);
+		SAMFileHeader header2 = in2.getFileHeader();
+		header2.setSortOrder(SAMFileHeader.SortOrder.unsorted);
+		
+        final SAMFileWriter out1 = new SAMFileWriterFactory().makeSAMOrBAMWriter(header1,
                 true, new File(samOutputFileName1));
         
-        final SAMFileWriter out2 = new SAMFileWriterFactory().makeSAMOrBAMWriter(in2.getFileHeader(),
+        final SAMFileWriter out2 = new SAMFileWriterFactory().makeSAMOrBAMWriter(header2,
                 true, new File(samOutputFileName2));
 
         iter1 = in1.iterator();
