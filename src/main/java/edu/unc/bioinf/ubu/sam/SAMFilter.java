@@ -60,10 +60,15 @@ public class SAMFilter {
         final SAMFileWriter writer = new SAMFileWriterFactory().makeSAMOrBAMWriter(reader.getFileHeader(),
                 false, outputFile);
         
+        int cnt = 0;
         for (SAMRecord read : reader) {
             // Output only the pairs that have passed our tests
             if (isReadIncluded(read)) {
                 writer.addAlignment(read);
+            }
+            cnt++;
+            if ((cnt % 1000000) == 0) {
+                System.out.println("Processed reads: " + cnt);
             }
         }
         
