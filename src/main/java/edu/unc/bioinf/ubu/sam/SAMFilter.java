@@ -6,6 +6,7 @@ import java.io.IOException;
 import net.sf.samtools.CigarElement;
 import net.sf.samtools.CigarOperator;
 import net.sf.samtools.SAMFileReader;
+import net.sf.samtools.SAMFileReader.ValidationStringency;
 import net.sf.samtools.SAMFileWriter;
 import net.sf.samtools.SAMFileWriterFactory;
 import net.sf.samtools.SAMRecord;
@@ -56,6 +57,7 @@ public class SAMFilter {
     private void filterSingleEnd(String input, String output) {
         File outputFile = new File(output);
         SAMFileReader reader = new SAMFileReader(new File(input));
+        reader.setValidationStringency(ValidationStringency.SILENT);
         
         final SAMFileWriter writer = new SAMFileWriterFactory().makeSAMOrBAMWriter(reader.getFileHeader(),
                 true, outputFile);
