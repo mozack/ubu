@@ -43,7 +43,10 @@ public class SamFilterOptions extends Options {
             System.err.println("Missing required output SAM/BAM file");
         }
         
-        if ((!getOptions().has(STRIP_INDELS)) && (!getOptions().hasArgument(MAX_INSERT_LEN)) && (!getOptions().hasArgument(MAPPING_QUALITY))) {
+        // Validate that there is filtering to be done.
+        // If no options are specified, only paired reads will be output.
+        if ((!getOptions().has(STRIP_INDELS)) && (!getOptions().hasArgument(MAX_INSERT_LEN)) && (!getOptions().hasArgument(MAPPING_QUALITY)) && 
+        	(getOptions().has(SINGLE_END))) {
         	isValid = false;
         	System.err.println("At least one filtering option must be specified");
         }
