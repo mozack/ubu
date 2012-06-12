@@ -10,6 +10,7 @@ public class SamFilterOptions extends Options {
     private static final String MAX_INSERT_LEN = "max-insert";
     private static final String MAPPING_QUALITY = "mapq";
     private static final String SINGLE_END = "single";
+    private static final String INCLUDE_INDELS_ONLY = "indels-only";
     
 	private OptionParser parser;
 	private boolean isValid;
@@ -24,6 +25,7 @@ public class SamFilterOptions extends Options {
             parser.accepts(STRIP_INDELS, "If specified, discard read pairs containing indels from output (default off)");
             parser.accepts(MAX_INSERT_LEN, "If specified, discard clusters greater than specified insert length").withRequiredArg().ofType(Integer.class);
             parser.accepts(MAPPING_QUALITY, "If specified, discard clusters with mapping quality less than the specified value").withRequiredArg().ofType(Integer.class);
+            parser.accepts(INCLUDE_INDELS_ONLY, "If specified, discard reads not containing indels (default off)");
     	}
     	
     	return parser;
@@ -45,10 +47,18 @@ public class SamFilterOptions extends Options {
         
         // Validate that there is filtering to be done.
         // If no options are specified, only paired reads will be output.
-        if ((!getOptions().has(STRIP_INDELS)) && (!getOptions().hasArgument(MAX_INSERT_LEN)) && (!getOptions().hasArgument(MAPPING_QUALITY)) && 
+        if ((!getOptions().has(STRIP_INDELS)) && 
+        	(!getOptions().hasArgument(MAX_INSERT_LEN)) &&
+        	(!getOptions().hasArgument(MAPPING_QUALITY)) &&
+        	(!getOptions().has(INCLUDE_INDELS_ONLY)) &&
         	(getOptions().has(SINGLE_END))) {
         	isValid = false;
         	System.err.println("At least one filtering option must be specified");
+        }
+        
+        if ((getOptions().has(STRIP_INDELS)) && (getOptions().has(INCLUDE_INDELS_ONLY))) {
+        	isValid = false;
+        	System.err.println("Cannot specify both " + STRIP_INDELS + " and " + INCLUDE_INDELS_ONLY);
         }
         
         if (!isValid) {
@@ -66,6 +76,10 @@ public class SamFilterOptions extends Options {
 	
 	public boolean shouldStripIndels() {
 		return getOptions().has(STRIP_INDELS);
+	}
+	
+	public boolean shouldIncludeIndelsOnly() {
+		return getOptions().has(INCLUDE_INDELS_ONLY);
 	}
 	
 	public boolean isPairedEnd() {

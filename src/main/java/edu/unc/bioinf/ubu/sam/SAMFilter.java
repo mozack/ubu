@@ -24,6 +24,7 @@ public class SAMFilter {
     
 	private boolean isPairedEnd = true;
     private boolean shouldStripIndels = false;
+    private boolean shouldIncludeIndelsOnly = false;
     private int     maxInsertLen = -1;
     private int     minMappingQuality = -1;
 
@@ -88,7 +89,7 @@ public class SAMFilter {
     
     boolean isReadIncluded(SAMRecord read) {
     	return
-    		((!hasIndel(read)) &&
+    		((!isFilteredDueToIndelCheck(read)) &&
     		 (!isMaxInsertLenExceeded(read)) &&
     		 (!isBelowMinMappingQuality(read)));
     }
@@ -133,11 +134,15 @@ public class SAMFilter {
         this.shouldStripIndels = true;
     }
     
-    public void setPairedEnd(boolean isPairedEnd) {
+    public void setShouldIncludeIndelsOnly(boolean shouldIncludeIndelsOnly) {
+		this.shouldIncludeIndelsOnly = shouldIncludeIndelsOnly;
+	}
+
+	public void setPairedEnd(boolean isPairedEnd) {
 		this.isPairedEnd = isPairedEnd;
 	}
 
-	private boolean hasIndel(SAMRecord read) {
+	private boolean isFilteredDueToIndelCheck(SAMRecord read) {
     	if (shouldStripIndels) {
 	        for (CigarElement element : read.getCigar().getCigarElements()) {
 	            if ((element.getOperator() == CigarOperator.D) ||
@@ -145,9 +150,18 @@ public class SAMFilter {
 	                return true;
 	            }
 	        }
+	        return false;
+    	} else if (shouldIncludeIndelsOnly) {
+	        for (CigarElement element : read.getCigar().getCigarElements()) {
+	            if ((element.getOperator() == CigarOperator.D) ||
+	                (element.getOperator() == CigarOperator.I)) {
+	                return false;
+	            }
+	        }
+	        return true;
     	}
-        
-        return false;
+    	
+    	return false;
     }
         
     public static void run(String[] args) throws IOException {
@@ -163,6 +177,7 @@ public class SAMFilter {
     		filter.setMaxInsertLen(options.getMaxInsertLen());
     		filter.setMinMappingQuality(options.getMinMappingQuality());
     		filter.setShouldStripIndels(options.shouldStripIndels());
+    		filter.setShouldIncludeIndelsOnly(options.shouldIncludeIndelsOnly());
     		filter.filter(options.getInputFile(), options.getOutputFile());
     		
             long e = System.currentTimeMillis();
