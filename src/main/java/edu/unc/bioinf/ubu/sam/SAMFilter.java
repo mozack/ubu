@@ -131,7 +131,7 @@ public class SAMFilter {
     }
     
     public void setShouldStripIndels(boolean shouldStripIndels) {
-        this.shouldStripIndels = true;
+        this.shouldStripIndels = shouldStripIndels;
     }
     
     public void setShouldIncludeIndelsOnly(boolean shouldIncludeIndelsOnly) {
