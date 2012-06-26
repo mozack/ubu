@@ -25,6 +25,13 @@ public class FastqRecord {
         this.lines = lines;
     }
     
+    FastqRecord(String id, String sequence, String quality) {
+    	lines[0] = id;
+    	lines[1] = sequence;
+    	lines[2] = "+";
+    	lines[3] = quality;
+    }
+    
     public String getId() {
         return lines[0];
     }
@@ -95,6 +102,10 @@ public class FastqRecord {
     
     String getQuality() {
     	return lines[3];
+    }
+    
+    public String getSequence() {
+    	return lines[1];
     }
     
     private void setQuality(String quality) {
