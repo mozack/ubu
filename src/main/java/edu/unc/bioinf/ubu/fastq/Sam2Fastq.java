@@ -65,15 +65,15 @@ public class Sam2Fastq {
 	}
 	
 	private FastqRecord samReadToFastqRecord(SAMRecord read) {
-		byte[] bases = read.getReadBases();
-		byte[] qualities = read.getBaseQualities();
+		String bases = read.getReadString();
+		String qualities = read.getBaseQualityString();
 		
 		if (read.getReadNegativeStrandFlag()) {
 			bases = reverseComplementor.reverseComplement(bases);
 			qualities = reverseComplementor.reverse(qualities);
 		}
 		
-		FastqRecord fastq = new FastqRecord(read.getReadName(), new String(bases), new String(qualities));
+		FastqRecord fastq = new FastqRecord(read.getReadName(), bases, qualities);
 		
 		return fastq;
 	}
@@ -90,7 +90,6 @@ public class Sam2Fastq {
 		
 		return isFirstInPair;
 	}
-	
 		
 	public void setShouldIdentifyEndByReadId(boolean shouldIdentifyEndByReadId) {
 		this.shouldIdentifyEndByReadId = shouldIdentifyEndByReadId;
@@ -101,6 +100,9 @@ public class Sam2Fastq {
 		options.parseOptions(args);
 		
 		if (options.isValid()) {
+			long s = System.currentTimeMillis();
+			System.out.println("sam2fastq starting");
+			
 			Sam2Fastq sam2Fastq = new Sam2Fastq();
 			if (options.isPairedEnd()) {
 				sam2Fastq.setShouldIdentifyEndByReadId(options.shouldIdEndByReadName());
@@ -108,6 +110,14 @@ public class Sam2Fastq {
 			} else {
 				throw new IllegalArgumentException ("Single end not yet supported for sam2fastq");
 			}
+			
+			long e = System.currentTimeMillis();
+			System.out.println("sam2fastq done.  Elapsed secs: " + (e-s)/1000);
 		}
 	}
+	
+//	public static void main(String[] args) throws Exception {
+//				
+//		run("--in /home/lisle/data/sam2fastq/iso.bam --fastq1 /home/lisle/data/sam2fastq/1.fastq --fastq2 /home/lisle/data/sam2fastq/2.fastq --use-name".split(" "));
+//	}
 }

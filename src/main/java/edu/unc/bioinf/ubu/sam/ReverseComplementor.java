@@ -53,4 +53,27 @@ public class ReverseComplementor {
         
         return bytes;
     }
+
+    /**
+     * Returns the reverse complement of the input string.
+     */
+    public String reverseComplement(String input) {
+    	return new String(reverseComplement(input.getBytes()));
+    }
+    
+    /**
+     * Returns the reverse of the input string.
+     */
+    public String reverse(String input) {
+    	return new String(reverse(input.getBytes()));
+    }
+    
+//    public static void main(String[] args) {
+//    	ReverseComplementor rc = new ReverseComplementor();
+//    	
+//    	//String rcStr = rc.reverseComplement("AAAATTTCCG");
+//    	String rcStr = rc.reverse("AAAATTTCCG");
+//    	
+//    	System.out.println(rcStr);
+//    }
 }
