@@ -33,7 +33,9 @@ public class Sam2Fastq {
         reader.setValidationStringency(ValidationStringency.SILENT);
 
         output1 = new FastqOutputFile();
+        output1.init(outputFastq1);
         output2 = new FastqOutputFile();
+        output2.init(outputFastq2);
         
         int output1Count = 0;
         int output2Count = 0;
