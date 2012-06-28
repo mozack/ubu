@@ -20,6 +20,8 @@ public class Sam2Fastq {
 	private FastqOutputFile output2;
 	private ReverseComplementor reverseComplementor = new ReverseComplementor();
 	private boolean shouldIdentifyEndByReadId = false;
+	private String end1Suffix;
+	private String end2Suffix;
 
 	/**
 	 * Convert the input paired end SAM/BAM file into 2 fastq files.
@@ -47,12 +49,12 @@ public class Sam2Fastq {
         			last1Read = read.getReadName();
         			output1Count += 1;
         		}
-        	} else {
+        	} else if (isSecondInPair(read)) {
         		if (!read.getReadName().equals(last2Read)) {
         			output2.write(samReadToFastqRecord(read));
         			last2Read = read.getReadName();
         			output2Count += 1;
-        		}        		
+        		}
         	}
         }
                 
@@ -60,8 +62,31 @@ public class Sam2Fastq {
         output2.close();
         
         if (output1Count != output2Count) {
-        	throw new IllegalStateException("Non-symmetrical read counts found for " + inputSam);
+        	throw new IllegalStateException("Non-symmetrical read counts found for " + inputSam + ".  Your reads may not be paired properly.");
         }
+	}
+	
+	/**
+	 * Convert the input SAM/BAM file into a single fastq file.
+	 * Input SAM files that contain multiple mappings should be sorted by read name. 
+	 */
+	public void convert(String inputSam, String outputFastq) throws IOException {
+		String last1Read = "";
+		
+        SAMFileReader reader = new SAMFileReader(new File(inputSam));
+        reader.setValidationStringency(ValidationStringency.SILENT);
+
+        output1 = new FastqOutputFile();
+        output1.init(outputFastq);
+        
+        for (SAMRecord read : reader) {
+    		if (!read.getReadName().equals(last1Read)) {
+    			output1.write(samReadToFastqRecord(read));
+    			last1Read = read.getReadName();
+    		}
+        }
+                
+        output1.close();
 	}
 	
 	private FastqRecord samReadToFastqRecord(SAMRecord read) {
@@ -82,7 +107,7 @@ public class Sam2Fastq {
 		boolean isFirstInPair;
 		
 		if (shouldIdentifyEndByReadId) {
-			isFirstInPair = read.getReadName().endsWith("/1");
+			isFirstInPair = read.getReadName().endsWith(end1Suffix);
 			
 		} else {
 			isFirstInPair = read.getFirstOfPairFlag();
@@ -90,11 +115,26 @@ public class Sam2Fastq {
 		
 		return isFirstInPair;
 	}
+	
+	private boolean isSecondInPair(SAMRecord read) {
+		boolean isSecondInPair;
 		
-	public void setShouldIdentifyEndByReadId(boolean shouldIdentifyEndByReadId) {
-		this.shouldIdentifyEndByReadId = shouldIdentifyEndByReadId;
+		if (shouldIdentifyEndByReadId) {
+			isSecondInPair = read.getReadName().endsWith(end2Suffix);
+			
+		} else {
+			isSecondInPair = read.getSecondOfPairFlag();
+		}
+		
+		return isSecondInPair;
 	}
-
+	
+	public void setEndSuffixes(String end1Suffix, String end2Suffix) {
+		this.shouldIdentifyEndByReadId = true;
+		this.end1Suffix = end1Suffix;
+		this.end2Suffix = end2Suffix;
+	}
+	
 	public static void run(String[] args) throws IOException {
 		Sam2FastqOptions options = new Sam2FastqOptions();
 		options.parseOptions(args);
@@ -105,7 +145,11 @@ public class Sam2Fastq {
 			
 			Sam2Fastq sam2Fastq = new Sam2Fastq();
 			if (options.isPairedEnd()) {
-				sam2Fastq.setShouldIdentifyEndByReadId(options.shouldIdEndByReadName());
+				
+				if (options.shouldIdEndByReadName()) {
+					sam2Fastq.setEndSuffixes(options.getEnd1Suffix(), options.getEnd2Suffix());
+				}
+				
 				sam2Fastq.convert(options.getInputFile(), options.getFastq1(), options.getFastq2());
 			} else {
 				throw new IllegalArgumentException ("Single end not yet supported for sam2fastq");
@@ -116,8 +160,8 @@ public class Sam2Fastq {
 		}
 	}
 	
-//	public static void main(String[] args) throws Exception {
-//				
-//		run("--in /home/lisle/data/sam2fastq/iso.bam --fastq1 /home/lisle/data/sam2fastq/1.fastq --fastq2 /home/lisle/data/sam2fastq/2.fastq --use-name".split(" "));
-//	}
+	public static void main(String[] args) throws Exception {
+				
+		run("--in /home/lisle/data/sam2fastq/iso.bam --fastq1 /home/lisle/data/sam2fastq/1.fastq --fastq2 /home/lisle/data/sam2fastq/2.fastq --use-name".split(" "));
+	}
 }
