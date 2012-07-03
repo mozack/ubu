@@ -37,15 +37,56 @@ public class ReadBlock {
     }
     
     public int getReferenceStop() {
+    	//TODO: This doesn't appear to be correct for delete block type
         return referenceStart + length - 1;
     }
 
     public int getLength() {
         return length;
     }
+    
+    public int getReferenceLength() {
+    	int refLength = 0;
+    	
+    	if (type != CigarOperator.D) {
+    		refLength = length;
+    	}
+    	
+    	return refLength;
+    }
 
     public CigarOperator getType() {
         return type;
+    }
+    
+    /**
+     * Returns a ReadBlock as a subset of this readblock
+     */
+    public ReadBlock getSubBlock(int accumulatedLength, int positionInRead, int maxLength) {
+    	
+    	// zero base + zero base - 1 base  + 1 = zero base
+    	int positionInBlock = positionInRead + accumulatedLength - readStart + 1;
+    	
+    	if ((type == CigarOperator.N) || (type == CigarOperator.D)) {
+    		// Intron / Deletion: return entire block
+        	return new ReadBlock(accumulatedLength+1, referenceStart + positionInBlock, length-positionInBlock, type);
+    	} else if (type == CigarOperator.S) {
+    		// Soft clipped blocks begin at next block's referenceStart.  No need to change it.
+    		return new ReadBlock(accumulatedLength+1, referenceStart, Math.min(maxLength, length - positionInBlock), type);
+    	} else {
+    		return new ReadBlock(accumulatedLength+1, referenceStart + positionInBlock, Math.min(maxLength, length - positionInBlock), type);
+    	}
+    }
+    
+    public static String toCigarString(List<ReadBlock> blocks) {
+    	StringBuffer cigar = new StringBuffer();
+    	
+    	for (ReadBlock block : blocks) {
+    		cigar.append(block.getLength());
+    		cigar.append(block.getType());
+    	}
+    	
+    	return cigar.toString();
     }
     
     //TODO - Move elsewhere and make non-static

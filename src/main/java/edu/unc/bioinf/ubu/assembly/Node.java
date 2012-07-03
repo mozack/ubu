@@ -2,11 +2,14 @@ package edu.unc.bioinf.ubu.assembly;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import net.sf.samtools.SAMRecord;
 
 
 public class Node {
@@ -15,6 +18,8 @@ public class Node {
 	private int count = 1;
 	private Map<Node, Edge> toEdges = new HashMap<Node, Edge>();
 	private Map<Node, Edge> fromEdges = new HashMap<Node, Edge>();
+	
+	private Set<SAMRecord> startingReads = new HashSet<SAMRecord>();
 	
 	private String source;
 	
@@ -54,6 +59,10 @@ public class Node {
 	
 	public String getSequence() {
 		return sequence;
+	}
+	
+	public void addStartingRead(SAMRecord read) {
+		this.startingReads.add(read);
 	}
 	
 	public String getSource() {
@@ -182,5 +191,9 @@ public class Node {
 	
 	public void removeFromEdge(Edge edge) {
 		this.fromEdges.remove(edge.getFrom());
+	}
+	
+	public Set<SAMRecord> getStartingReads() {
+		return Collections.unmodifiableSet(startingReads);
 	}
 }
