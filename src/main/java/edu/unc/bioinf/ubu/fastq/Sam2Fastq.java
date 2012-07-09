@@ -41,6 +41,7 @@ public class Sam2Fastq {
         
         int output1Count = 0;
         int output2Count = 0;
+        int lineCnt = 0;
         
         for (SAMRecord read : reader) {
         	if (isFirstInPair(read)) {
@@ -56,6 +57,11 @@ public class Sam2Fastq {
         			output2Count += 1;
         		}
         	}
+        	
+            lineCnt++;
+            if ((lineCnt % 1000000) == 0) {
+                System.out.println("record: " + lineCnt);
+            }
         }
                 
         output1.close();
@@ -68,6 +74,7 @@ public class Sam2Fastq {
 	
 	/**
 	 * Convert the input SAM/BAM file into a single fastq file.
+	 * Input SAM files that contain multiple mappings should be sorted by read name.
 	 */
 	public void convert(String inputSam, String outputFastq) throws IOException {
 		String last1Read = "";
@@ -77,12 +84,18 @@ public class Sam2Fastq {
 
         output1 = new FastqOutputFile();
         output1.init(outputFastq);
+        int lineCnt = 0;
         
         for (SAMRecord read : reader) {
     		if (!read.getReadName().equals(last1Read)) {
     			output1.write(samReadToFastqRecord(read));
     			last1Read = read.getReadName();
     		}
+    		
+            lineCnt++;
+            if ((lineCnt % 1000000) == 0) {
+                System.out.println("record: " + lineCnt);
+            }
         }
                 
         output1.close();
