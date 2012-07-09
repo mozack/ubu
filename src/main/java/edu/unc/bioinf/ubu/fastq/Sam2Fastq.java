@@ -68,7 +68,6 @@ public class Sam2Fastq {
 	
 	/**
 	 * Convert the input SAM/BAM file into a single fastq file.
-	 * Input SAM files that contain multiple mappings should be sorted by read name. 
 	 */
 	public void convert(String inputSam, String outputFastq) throws IOException {
 		String last1Read = "";
