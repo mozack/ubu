@@ -164,7 +164,7 @@ public class Sam2Fastq {
 				
 				sam2Fastq.convert(options.getInputFile(), options.getFastq1(), options.getFastq2());
 			} else {
-				throw new IllegalArgumentException ("Single end not yet supported for sam2fastq");
+				sam2Fastq.convert(options.getInputFile(), options.getFastq1());
 			}
 			
 			long e = System.currentTimeMillis();
