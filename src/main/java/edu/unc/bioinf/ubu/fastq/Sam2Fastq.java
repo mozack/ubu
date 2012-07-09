@@ -110,7 +110,7 @@ public class Sam2Fastq {
 			qualities = reverseComplementor.reverse(qualities);
 		}
 		
-		FastqRecord fastq = new FastqRecord(read.getReadName(), bases, qualities);
+		FastqRecord fastq = new FastqRecord("@" + read.getReadName(), bases, qualities);
 		
 		return fastq;
 	}
