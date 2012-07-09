@@ -171,9 +171,4 @@ public class Sam2Fastq {
 			System.out.println("sam2fastq done.  Elapsed secs: " + (e-s)/1000);
 		}
 	}
-	
-	public static void main(String[] args) throws Exception {
-				
-		run("--in /home/lisle/data/sam2fastq/iso.bam --fastq1 /home/lisle/data/sam2fastq/1.fastq --fastq2 /home/lisle/data/sam2fastq/2.fastq --use-name".split(" "));
-	}
 }
