@@ -65,7 +65,7 @@ public class Sam2Fastq {
         				fusionRead = read;
         			}
         		} else {
-        			if ((isFusion(read)) && (fusionRead != null) && (read.getAttribute(MAPSLICE_FUSION_TAG).equals(fusionRead.getAttribute(MAPSLICE_FUSION_TAG)))) {
+        			if (isMatchingFusionRead(fusionRead, read)) {
         				output1.write(fusionToFastqRecord(fusionRead, read));
         				output1Count += 1;
         				fusionRead = null;
@@ -82,7 +82,7 @@ public class Sam2Fastq {
         				fusionRead = read;
         			}
         		} else {
-        			if ((isFusion(read)) && (fusionRead != null) && (read.getAttribute(MAPSLICE_FUSION_TAG).equals(fusionRead.getAttribute(MAPSLICE_FUSION_TAG)))) {
+        			if (isMatchingFusionRead(fusionRead, read)) {
         				output2.write(fusionToFastqRecord(fusionRead, read));
         				output2Count += 1;
         				fusionRead = null;
@@ -102,6 +102,40 @@ public class Sam2Fastq {
         if (output1Count != output2Count) {
         	throw new IllegalStateException("Non-symmetrical read counts found for " + inputSam + ".  Your reads may not be paired properly.");
         }
+	}
+	
+	private boolean isMatchingFusionBlocks(SAMRecord read1, SAMRecord read2) {
+		boolean isMatching = false;
+		
+		List<ReadBlock> read1Blocks = ReadBlock.getReadBlocks(read1);
+		List<ReadBlock> read2Blocks = ReadBlock.getReadBlocks(read2);
+		
+		ReadBlock read1FirstBlock = read1Blocks.get(0);
+		ReadBlock read1LastBlock  = read1Blocks.get(read1Blocks.size()-1);
+		ReadBlock read2FirstBlock = read2Blocks.get(0);
+		ReadBlock read2LastBlock  = read2Blocks.get(read2Blocks.size()-1);
+		
+		if ((read1FirstBlock.getType() == CigarOperator.S) &&
+			(read2LastBlock.getType() == CigarOperator.S) &&
+			(read1FirstBlock.getLength() == read2LastBlock.getLength())) {
+			isMatching = true;
+		} else if ((read1LastBlock.getType() == CigarOperator.S) &&
+				   (read2FirstBlock.getType() == CigarOperator.S) &&
+				   (read1LastBlock.getLength() == read2LastBlock.getLength())) {
+			isMatching = true;
+		}
+		
+		return isMatching;
+	}
+	
+	private boolean isMatchingFusionRead(SAMRecord fusionRead, SAMRecord read) {
+		return (
+				(fusionRead != null) &&
+				(isFusion(read)) && 
+				(read.getAttribute(MAPSLICE_FUSION_TAG).equals(fusionRead.getAttribute(MAPSLICE_FUSION_TAG))) &&
+				(read.getReadString().equals(fusionRead.getReadString())) &&
+				(isMatchingFusionBlocks(fusionRead, read))
+				);
 	}
 	
 	private boolean isFusion(SAMRecord read) {
@@ -208,6 +242,7 @@ public class Sam2Fastq {
 		String bases = donerBases + accepterBases;
 		
 		// Assumption: Qualities are in the original format
+		// TODO: May not be true.
 		String qualities = doner.getBaseQualityString();
 		
 		// Read name should be same for both reads.
@@ -287,7 +322,7 @@ public class Sam2Fastq {
 	
 	public static void main(String[] args) throws Exception {
 		String[] argz =
-			"--in /home/lisle/sam2fastq/fusion.sam --fastq1 /home/lisle/sam2fastq/fus1.fastq --fastq2 /home/lisle/sam2fastq/fus2.fastq --end1 /1 --end2 /2 --mfusion".split(" ");
+			"--in /home/lisle/sam2fastq/fusion2.sam --fastq1 /home/lisle/sam2fastq/fus2_1.fastq --fastq2 /home/lisle/sam2fastq/fus2_2.fastq --end1 /1 --end2 /2 --mfusion".split(" ");
 		
 		run(argz);
 	}
