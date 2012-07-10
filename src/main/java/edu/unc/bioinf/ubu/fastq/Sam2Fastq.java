@@ -56,9 +56,9 @@ public class Sam2Fastq {
         for (SAMRecord read : reader) {
         	if (isFirstInPair(read)) {
         		if (!read.getReadName().equals(last1Read)) {
+        			last1Read = read.getReadName();
         			if (!isFusion(read)) {
 	        			output1.write(samReadToFastqRecord(read));
-	        			last1Read = read.getReadName();
 	        			output1Count += 1;
 	        			fusionRead = null;
         			} else {
@@ -73,9 +73,9 @@ public class Sam2Fastq {
         		}
         	} else if (isSecondInPair(read)) {
         		if (!read.getReadName().equals(last2Read)) {
+        			last2Read = read.getReadName();
         			if (!isFusion(read)) {
 	        			output2.write(samReadToFastqRecord(read));
-	        			last2Read = read.getReadName();
 	        			output2Count += 1;
 	        			fusionRead = null;
         			} else {
@@ -189,7 +189,7 @@ public class Sam2Fastq {
 			donerLength = read1.getReadLength() - read1LastBlock.getLength();
 			
 			accepter = read2;
-			accepterStart = read2FirstBlock.getLength() + 1;
+			accepterStart = read2FirstBlock.getLength();
 		}
 		
 		String donerBases = doner.getReadString().substring(0, donerLength);
@@ -278,5 +278,12 @@ public class Sam2Fastq {
 			long e = System.currentTimeMillis();
 			System.out.println("sam2fastq done.  Elapsed secs: " + (e-s)/1000);
 		}
+	}
+	
+	public static void main(String[] args) throws Exception {
+		String[] argz =
+			"--in /home/lisle/sam2fastq/fusion.sam --fastq1 /home/lisle/sam2fastq/fus1.fastq --fastq2 /home/lisle/sam2fastq/fus2.fastq --end1 /1 --end2 /2 --mfusion".split(" ");
+		
+		run(argz);
 	}
 }
