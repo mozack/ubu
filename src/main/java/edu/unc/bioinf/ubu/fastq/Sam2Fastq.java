@@ -190,6 +190,9 @@ public class Sam2Fastq {
 			
 			accepter = read2;
 			accepterStart = read2FirstBlock.getLength();
+		} else {
+			throw new IllegalArgumentException("Invalid fusion detected. read1: " + read1.getSAMString() +
+					" read2: " + read2.getSAMString());
 		}
 		
 		String donerBases = doner.getReadString().substring(0, donerLength);
@@ -211,6 +214,8 @@ public class Sam2Fastq {
 		String readName = doner.getReadName();
 		
 		FastqRecord fastq = new FastqRecord("@" + readName, bases, qualities);
+		
+		System.out.println("Fusion: " + readName);
 		
 		return fastq;
 	}
