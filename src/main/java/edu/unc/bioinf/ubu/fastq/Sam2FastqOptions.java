@@ -14,6 +14,7 @@ public class Sam2FastqOptions extends Options {
     private static final String FASTQ2 = "fastq2";
     private static final String END1_SUFFIX = "end1";
     private static final String END2_SUFFIX = "end2";
+    private static final String MAPSPLICE_FUSION = "mfusion";
     
 	private OptionParser parser;
 	private boolean isValid;
@@ -27,6 +28,7 @@ public class Sam2FastqOptions extends Options {
             parser.accepts(FASTQ2, "Second FASTQ file for paired end").withRequiredArg().ofType(String.class);
             parser.accepts(END1_SUFFIX, "Id suffix used to identify the first read in a pair.  i.e. /1 (omit this option to use bit flag)").withRequiredArg().ofType(String.class);
             parser.accepts(END2_SUFFIX, "Id suffix used to identify the second read in a pair.  i.e. /2 (omit this option to use bit flag)").withRequiredArg().ofType(String.class);
+            parser.accepts(MAPSPLICE_FUSION, "Handle Mapsplice fusions.");
     	}
     	
     	return parser;
@@ -92,6 +94,10 @@ public class Sam2FastqOptions extends Options {
 	
 	public boolean shouldIdEndByReadName() {
 		return getOptions().hasArgument(END1_SUFFIX);
+	}
+	
+	public boolean shouldHandleMapspliceFusions() {
+		return getOptions().has(MAPSPLICE_FUSION);
 	}
 	
 	public String getEnd1Suffix() {
