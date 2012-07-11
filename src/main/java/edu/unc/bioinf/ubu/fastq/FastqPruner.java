@@ -24,7 +24,7 @@ public class FastqPruner {
         
         for (SAMRecord read : reader) {
         	if ((read.getFlags() & bit) == bit) {
-        		readsToFilter.add(getBaseId(read.getReadName()));
+        		readsToFilter.add("@" + getBaseId(read.getReadName()));
         	}
         }
         
@@ -92,12 +92,20 @@ public class FastqPruner {
     }
     
     public static void main(String[] args) throws Exception {
-    	String inputSam  = args[0];
-    	String inFastq1  = args[1];
-    	String inFastq2  = args[2];
-    	String outFastq1 = args[3];
-    	String outFastq2 = args[4];
-    	int bit          = Integer.parseInt(args[5]);
+//    	String inputSam  = args[0];
+//    	String inFastq1  = args[1];
+//    	String inFastq2  = args[2];
+//    	String outFastq1 = args[3];
+//    	String outFastq2 = args[4];
+//    	int bit          = Integer.parseInt(args[5]);
+    	
+    	String inputSam  = "/home/lisle/sam2fastq/prune/prune.sam";
+    	String inFastq1  = "/home/lisle/sam2fastq/prune/1.fastq";
+    	String inFastq2  = "/home/lisle/sam2fastq/prune/2.fastq";
+    	String outFastq1 = "/home/lisle/sam2fastq/prune/out1.fastq";
+    	String outFastq2 = "/home/lisle/sam2fastq/prune/out2.fastq";
+    	int bit          = 4;
+
     	
     	long s = System.currentTimeMillis();
     	
