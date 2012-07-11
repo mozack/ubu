@@ -56,6 +56,10 @@ public class Sam2Fastq {
         for (SAMRecord read : reader) {
         	if (isFirstInPair(read)) {
         		if (!read.getReadName().equals(last1Read)) {
+                	if (fusionRead != null) {
+                		System.out.println("UNMATCHED FUSION READ: " + fusionRead.getSAMString());
+                		fusionRead = null;
+                	}
         			last1Read = read.getReadName();
         			if (!isFusion(read)) {
 	        			output1.write(samReadToFastqRecord(read));
@@ -73,6 +77,10 @@ public class Sam2Fastq {
         		}
         	} else if (isSecondInPair(read)) {
         		if (!read.getReadName().equals(last2Read)) {
+                	if (fusionRead != null) {
+                		System.out.println("UNMATCHED FUSION READ: " + fusionRead.getSAMString());
+                		fusionRead = null;
+                	}
         			last2Read = read.getReadName();
         			if (!isFusion(read)) {
 	        			output2.write(samReadToFastqRecord(read));
@@ -88,11 +96,6 @@ public class Sam2Fastq {
         				fusionRead = null;
         			}        			
         		}
-        	}
-        	
-        	if (fusionRead != null) {
-        		System.out.println("UNMATCHED FUSION READ: " + fusionRead.getSAMString());
-        		fusionRead = null;
         	}
         	
             lineCnt++;
@@ -327,7 +330,7 @@ public class Sam2Fastq {
 	
 	public static void main(String[] args) throws Exception {
 		String[] argz =
-			"--in /home/lisle/sam2fastq/fusion2.sam --fastq1 /home/lisle/sam2fastq/fus2_1.fastq --fastq2 /home/lisle/sam2fastq/fus2_2.fastq --end1 /1 --end2 /2 --mfusion".split(" ");
+			"--in /home/lisle/sam2fastq/fusion3.sam --fastq1 /home/lisle/sam2fastq/fus3_1.fastq --fastq2 /home/lisle/sam2fastq/fus3_2.fastq --end1 /1 --end2 /2 --mfusion".split(" ");
 		
 		run(argz);
 	}
