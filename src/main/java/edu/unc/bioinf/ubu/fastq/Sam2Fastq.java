@@ -90,6 +90,11 @@ public class Sam2Fastq {
         		}
         	}
         	
+        	if (fusionRead != null) {
+        		System.out.println("UNMATCHED FUSION READ: " + fusionRead.getSAMString());
+        		fusionRead = null;
+        	}
+        	
             lineCnt++;
             if ((lineCnt % 1000000) == 0) {
                 System.out.println("record: " + lineCnt);
