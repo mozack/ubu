@@ -122,11 +122,11 @@ public class Sam2Fastq {
 		
 		if ((read1FirstBlock.getType() == CigarOperator.S) &&
 			(read2LastBlock.getType() == CigarOperator.S) &&
-			(read1FirstBlock.getLength() == read2LastBlock.getLength())) {
+			(read1FirstBlock.getLength() + read2LastBlock.getLength() == read1.getReadLength())) {
 			isMatching = true;
 		} else if ((read1LastBlock.getType() == CigarOperator.S) &&
 				   (read2FirstBlock.getType() == CigarOperator.S) &&
-				   (read1LastBlock.getLength() == read2LastBlock.getLength())) {
+				   (read1LastBlock.getLength() + read2FirstBlock.getLength() == read1.getReadLength())) {
 			isMatching = true;
 		}
 		
