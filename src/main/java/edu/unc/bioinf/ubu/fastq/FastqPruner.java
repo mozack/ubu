@@ -14,7 +14,7 @@ public class FastqPruner {
 	
 	private Set<String> readsToFilter = new HashSet<String>();
 
-	public void prune(String inputSam, String inFastq1, String inFastq2, String outFastq1, String outFastq2, int bit) 
+	public void prune(String inputSam, String inFastq1, String inFastq2, String outFastq1, String outFastq2, int bit, String tag) 
 		throws FileNotFoundException, IOException {
 		
         SAMFileReader reader = new SAMFileReader(new File(inputSam));
@@ -23,8 +23,16 @@ public class FastqPruner {
         System.out.println("Loading reads to filter.");
         
         for (SAMRecord read : reader) {
-        	if ((read.getFlags() & bit) == bit) {
-        		readsToFilter.add("@" + getBaseId(read.getReadName()));
+        	if (bit > 0) {
+	        	if ((read.getFlags() & bit) == bit) {
+	        		readsToFilter.add("@" + getBaseId(read.getReadName()));
+	        	}
+        	}
+        	
+        	if (tag != null) {
+        		if (read.getAttribute(tag) != null) {
+        			readsToFilter.add("@" + getBaseId(read.getReadName()));
+        		}
         	}
         }
         
@@ -98,6 +106,10 @@ public class FastqPruner {
     	String outFastq1 = args[3];
     	String outFastq2 = args[4];
     	int bit          = Integer.parseInt(args[5]);
+    	String tag = null;
+    	if (args.length == 7) {
+    		tag = args[6];
+    	}
     	
 //    	String inputSam  = "/home/lisle/sam2fastq/prune/prune.sam";
 //    	String inFastq1  = "/home/lisle/sam2fastq/prune/1.fastq";
@@ -109,7 +121,7 @@ public class FastqPruner {
     	
     	long s = System.currentTimeMillis();
     	
-    	new FastqPruner().prune(inputSam, inFastq1, inFastq2, outFastq1, outFastq2, bit);
+    	new FastqPruner().prune(inputSam, inFastq1, inFastq2, outFastq1, outFastq2, bit, tag);
     	
     	long e = System.currentTimeMillis();
     	
