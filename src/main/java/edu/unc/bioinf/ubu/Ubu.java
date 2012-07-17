@@ -2,6 +2,7 @@ package edu.unc.bioinf.ubu;
 
 import java.util.Arrays;
 
+import edu.unc.bioinf.ubu.assembly.ReAligner;
 import edu.unc.bioinf.ubu.fastq.FastqFormatter;
 import edu.unc.bioinf.ubu.fastq.Sam2Fastq;
 import edu.unc.bioinf.ubu.sam.GenomeToTranscriptome;
@@ -26,6 +27,7 @@ public class Ubu {
 	private static final String JUNC = "sam-junc";
 	private static final String SAM2FASTQ = "sam2fastq";
 	private static final String FASTQ_FORMAT = "fastq-format";
+	private static final String REALIGN = "realign";
 	
 	private static final int MAX_CMD_LEN = 15;
 	
@@ -54,6 +56,8 @@ public class Ubu {
 				SamConverter.run(argz);
 			} else if (cmd.equals(SAM2FASTQ)) {
 				Sam2Fastq.run(argz);
+			} else if (cmd.equals(REALIGN)) {
+				ReAligner.run(argz);
 			} else {
 				System.out.println("Command [" + cmd + "] is unrecognized.");
 				printAvailablePrograms();
@@ -73,6 +77,7 @@ public class Ubu {
 		printProgram(getPaddedString(JUNC), "Count splice junctions in a SAM or BAM file");
 		printProgram(getPaddedString(SAM2FASTQ), "Convert SAM/BAM file to FASTQ");
 		printProgram(getPaddedString(FASTQ_FORMAT), "Format a single FASTQ file (clean up read ids and/or convert quality scoring)");
+		printProgram(getPaddedString(REALIGN), "");
 	}
 	
 	private String getPaddedString(String str) {
