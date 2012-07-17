@@ -59,6 +59,10 @@ public class ReAlignerOptions extends Options {
 			isValid = false;
 			System.out.println("Missing required working directory");
 		}
+		
+        if (!isValid) {
+            printHelp();
+        }
 	}
 	
 	public String getInputFile() {
