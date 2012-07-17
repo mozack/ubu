@@ -14,40 +14,32 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import net.sf.samtools.CigarOperator;
-import net.sf.samtools.SAMFileHeader;
 import net.sf.samtools.SAMFileReader;
-import net.sf.samtools.SAMFileWriter;
-import net.sf.samtools.SAMFileWriterFactory;
 import net.sf.samtools.SAMFileReader.ValidationStringency;
 import net.sf.samtools.SAMRecord;
 
-import edu.unc.bioinf.ubu.fastq.FastqInputFile;
-import edu.unc.bioinf.ubu.fastq.FastqRecord;
-import edu.unc.bioinf.ubu.sam.ReadBlock;
-
+/**
+ * Assembles long contigs from a (relatively small) SAM file.
+ * 
+ * @author Lisle Mose (lmose at unc dot edu)
+ */
 public class Assembler {
-	
-//	static final int KMER_SIZE = 55;
-//	static final int MIN_EDGE_FREQUENCY = 10;
-//	static final int MIN_NODE_FREQUENCY = 1;
-	
-	private int kmerSize = 33;
-//	private int kmerSize = 77;
-//	private int minEdgeFrequency = 25;
-//	private int minNodeFrequncy = 25;
-	
-	private int minEdgeFrequency = 15;
-	private int minNodeFrequncy = 15;
-
+		
+//	private int kmerSize = 33;
+//	private int minEdgeFrequency = 15;
+//	private int minNodeFrequncy = 15;
+//
 //	private int minContigLength = 101;
-	private int minContigLength = 101;
-	//private double minEdgeRatio = .51;
-	private double minEdgeRatio = .05;
+//	private double minEdgeRatio = .05;
+	
+	private int kmerSize;
+	private int minEdgeFrequency;
+	private int minNodeFrequncy;
+
+	private int minContigLength;
+	private double minEdgeRatio;
 	
 	private int minMergeSize = 25;
-	
-	private FastqInputFile fastq = new FastqInputFile();
 	
 	private Map<String, Node> nodes = new HashMap<String, Node>();
 	
@@ -56,43 +48,10 @@ public class Assembler {
 	private List<Contig> contigs = new ArrayList<Contig>();
 	
 	private BufferedWriter writer;
-	
-	private SAMFileHeader samHeader;
-	
-	//private Map<String, SAMRecord> updatedReads = new HashMap<String, SAMRecord>();
-	Set<SAMRecord> updatedReads = new HashSet<SAMRecord>();
-	
-	//private Aligner aligner = new Aligner("/home/lisle/reference/chr5/chr5.fa");
-	
-	private Aligner aligner = new Aligner("/home/lisle/reference/chr17/chr17.fa");
-	
-	//private Aligner aligner = new Aligner("/home/lisle/reference/chrX/chrX.fa");
-	
-	public void assemble(String inputSam, String outputPrefix) throws Exception {
-		String contigsFasta = outputPrefix + "_contigs.fasta";
-		String contigsSam = outputPrefix + "_contigs.sam";
-		String readsBam = outputPrefix + "_reads.bam";
 		
-		System.out.println("Assembling contigs");
-		assembleContigs(inputSam, contigsFasta);
-		
-		System.out.println("Aligning contigs");
-		alignContigs(contigsFasta, contigsSam);
-		
-		System.out.println("Adjusting reads");
-		adjustReads(contigsSam);
-		
-		System.out.println("Writing adjusted reads");
-		outputReads(readsBam);
-		
-		System.out.println("Done.");
-	}
-	
-	public void assembleContigs(String inputSam, String output) throws FileNotFoundException, IOException {
+	public List<Contig> assembleContigs(String inputSam, String output) throws FileNotFoundException, IOException {
         SAMFileReader reader = new SAMFileReader(new File(inputSam));
         reader.setValidationStringency(ValidationStringency.SILENT);
-        
-        samHeader = reader.getFileHeader();
 
 		writer = new BufferedWriter(new FileWriter(output, false));
 		
@@ -103,10 +62,9 @@ public class Assembler {
 			numRecs++;
 		}
 		
-		System.out.println("Num records: " + numRecs);
-		System.out.println("Num nodes: " + nodes.size());
-		
-		printEdgeCounts();
+		System.out.println("Num records: " + numRecs + ", Num nodes: " + nodes.size());
+				
+//		printEdgeCounts();
 		
 		filterLowFrequencyEdges();
 		filterLowFrequencyNodes();
@@ -119,159 +77,8 @@ public class Assembler {
 		
 		writer.close();
 		reader.close();
-	}
-	
-	private void adjustReads(String contigSam) {
-		Map<String, Contig> contigMap = new HashMap<String, Contig>();
-		for (Contig contig : contigs) {
-			contigMap.put(contig.getDescriptor(), contig);
-		}
 		
-        SAMFileReader reader = new SAMFileReader(new File(contigSam));
-        reader.setValidationStringency(ValidationStringency.SILENT);
-        
-        for (SAMRecord contigRead : reader) {
-        	
-        	List<ReadBlock> contigReadBlocks = ReadBlock.getReadBlocks(contigRead);
-        	Contig contig = contigMap.get(contigRead.getReadName());
-        	List<ReadPosition> readPositions = contig.getFilteredReadPositions();
-        	for (ReadPosition readPosition : readPositions) {
-        		//TODO: Won't handle multi-mappers
-        		
-//        		int position = contigRead.getAlignmentStart() + readPosition.getPosition();
-        		
-//        		if (position != readPosition.getRead().getAlignmentStart()) {
-//        			System.out.println("Different position: " + readPosition.getRead().getReadName());
-//        		}
-        		
-//    			SAMRecord read = readPosition.getRead();
-//    			read.setAlignmentStart(position);
-    			SAMRecord updatedRead = updateReadAlignment(contigReadBlocks, readPosition);
-    			if (updatedRead != null) {
-    				updatedReads.add(updatedRead);
-    			}
-    			//updatedReads.put(read.getReadName(), read);
-        		
-    			/*
-        		SAMRecord updatedRead = updatedReads.get(readPosition.getRead().getReadName());
-        		if (updatedRead == null) {
-        			SAMRecord read = readPosition.getRead();
-        			read.setAlignmentStart(position);
-        			updatedReads.put(read.getReadName(), read);
-        		} else if (updatedRead.getAlignmentStart() != position) {
-        			System.out.println("Skipping multiple position for read: " + updatedRead.getReadName());
-        		}
-        		*/
-        	}
-        }
-	}
-	
-    private SAMRecord cloneRead(SAMRecord read) {
-        try {
-            return (SAMRecord) read.clone();
-        } catch (CloneNotSupportedException e) {
-            // Infamous "this should never happen" comment here.
-            e.printStackTrace();
-            throw new RuntimeException(e);
-        }
-    }
-	
-	SAMRecord updateReadAlignment(List<ReadBlock> contigReadBlocks, ReadPosition orig) {
-		List<ReadBlock> blocks = new ArrayList<ReadBlock>();
-		SAMRecord read = cloneRead(orig.getRead());
-		
-		int contigPosition = orig.getPosition();
-		int accumulatedLength = 0;
-		
-		// read block positions are one based
-		// ReadPosition is zero based
-		
-		for (ReadBlock contigBlock : contigReadBlocks) {
-			if ((contigBlock.getReadStart() + contigBlock.getReferenceLength()) >= orig.getPosition() + 1) {
-				ReadBlock block = contigBlock.getSubBlock(accumulatedLength, contigPosition, read.getReadLength() - accumulatedLength);
-				
-				//TODO: Investigate how this could happen
-				if (block.getLength() != 0) {
-					blocks.add(block);
-					
-					if (block.getType() != CigarOperator.D) {
-						accumulatedLength += block.getLength();
-					}
-					
-					if (accumulatedLength > read.getReadLength()) {
-						throw new IllegalStateException("Accumulated Length: " + accumulatedLength + " is greater than read length: " + read.getReadLength());
-					}
-					
-					if (accumulatedLength == read.getReadLength()) {
-						break;
-					}
-				}
-			}
-		}
-		
-		//TODO: Investigate how this could happen.
-		if (blocks.size() > 0) {
-			int newAlignmentStart = blocks.get(0).getReferenceStart();
-			String newCigar = ReadBlock.toCigarString(blocks);
-			
-			read.setCigarString(newCigar);
-			read.setAlignmentStart(newAlignmentStart);
-		} else {
-			read = null;
-		}
-		
-		return read;
-	}
-	
-	private void outputReads(String readsBam) {
-		
-		samHeader.setSortOrder(SAMFileHeader.SortOrder.unsorted);
-		
-        final SAMFileWriter out = new SAMFileWriterFactory().makeSAMOrBAMWriter(samHeader,
-                true, new File(readsBam));
- 
-        for (SAMRecord read : updatedReads) {
-        	out.addAlignment(read);
-        }
-        
-        out.close();
-	}
-	
-	private void alignContigs(String contigFile, String contigSam) throws InterruptedException, IOException {
-		aligner.align(contigFile, contigSam);
-	}
-	
-	private void _assemble(String inputFastq, String output) throws FileNotFoundException, IOException {
-		fastq.init(inputFastq);
-		writer = new BufferedWriter(new FileWriter(output, false));
-		
-		FastqRecord rec = fastq.getNextRecord();
-		int numRecs = 0;
-		
-		while (rec != null) {
-			String sequence = rec.getSequence();
-//			addToGraph(new ReverseComplementor().reverseComplement(sequence));
-			addToGraph(sequence);
-			
-			rec = fastq.getNextRecord();
-			numRecs++;
-		}
-		
-		System.out.println("Num records: " + numRecs);
-		System.out.println("Num nodes: " + nodes.size());
-		
-		printEdgeCounts();
-		
-		filterLowFrequencyEdges();
-		filterLowFrequencyNodes();
-		
-		identifyRootNodes();
-		
-		buildContigs();
-//		mergeContigs();
-		outputContigs();
-		
-		writer.close();
+		return contigs;
 	}
 	
 	public void setKmerSize(int kmerSize) {
@@ -551,7 +358,7 @@ public class Assembler {
 		
 //		ayc.assemble("/home/lisle/ayc/case2/round2/case2_tumor.bam", "/home/lisle/ayc/case2/round2/ra_tumor");
 		
-		ayc.assemble("/home/lisle/ayc/case0/round2/case0_tumor.bam", "/home/lisle/ayc/case0/round2/ra_tumor");
+//		ayc.assemble("/home/lisle/ayc/case0/round2/case0_tumor.bam", "/home/lisle/ayc/case0/round2/ra_tumor");
 		
 //		ayc.assemble("/home/lisle/ayc/case2/realigned/ra_normal.fastq", "/home/lisle/ayc/case2/realigned/normal_33_02.fasta");
 //		ayc.assemble("/home/lisle/ayc/case2/realigned/ra_tumor.fastq", "/home/lisle/ayc/case2/realigned/tumor_33_02.fasta");
