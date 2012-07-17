@@ -93,6 +93,8 @@ public class ReAligner {
 			} else {
 				log ("No contigs assembled for region: " + region.getDescriptor());
 			}
+			
+			updatedReads.clear();
 		}
 		
 		log("Closing output BAM");
