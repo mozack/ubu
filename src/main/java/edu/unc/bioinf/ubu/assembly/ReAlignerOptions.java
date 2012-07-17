@@ -35,6 +35,8 @@ public class ReAlignerOptions extends Options {
 
 	@Override
 	protected void validate() {
+		isValid = true;
+		
 		if (!getOptions().hasArgument(INPUT_SAM)) {
 			isValid = false;
 			System.out.println("Missing required input SAM/BAM file");
