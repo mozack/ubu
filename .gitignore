@@ -6,6 +6,8 @@ test-output
 .project
 .settings
 bin
-/home/lisle/code/ubu/src/test/java/edu/unc/bioinf/ubu/fastq/testdata/output.fastq
+src/test/java/edu/unc/bioinf/ubu/fastq/testdata/output.fastq
 *~
-/home/lisle/code/ubu/src/test/java/edu/unc/bioinf/ubu/fastq/testdata/test_output
+src/test/java/edu/unc/bioinf/ubu/fastq/testdata/test_output
+src/test/java/edu/unc/bioinf/ubu/fastq/testdata/sam2fastq_paired_out1.fastq
+src/test/java/edu/unc/bioinf/ubu/fastq/testdata/sam2fastq_paired_out2.fastq
