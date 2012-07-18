@@ -264,6 +264,7 @@ public class ReAligner {
     }
     
 	private void outputReads(String readsBam) {		
+		System.out.println("Writing " + updatedReads.size() + " reads.");
         for (SAMRecord read : updatedReads) {
         	outputReadsBam.addAlignment(read);
         }
