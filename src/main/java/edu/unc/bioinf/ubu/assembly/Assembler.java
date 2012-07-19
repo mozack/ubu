@@ -71,9 +71,13 @@ public class Assembler {
 		
 		identifyRootNodes();
 		
-		buildContigs();
-//		mergeContigs();
-		outputContigs();
+		try {
+			buildContigs();
+	//		mergeContigs();
+			outputContigs();
+		} catch (DepthExceededException e) {
+			System.out.println("DEPTH EXCEEDED for : " + inputSam);
+		}
 		
 		writer.close();
 		reader.close();
@@ -191,6 +195,15 @@ public class Assembler {
 	}
 	
 	private void buildContig(Node node, Set<Node> visitedNodes, Contig contig, Counts counts) {
+		buildContig(node, visitedNodes, contig, counts, 0);
+	}
+	
+	private void buildContig(Node node, Set<Node> visitedNodes, Contig contig, Counts counts, int depth) {
+		
+		if (depth > 500) {
+			throw new DepthExceededException(depth);
+		}
+		
 		if (visitedNodes.contains(node)) {
 			counts.setTerminatedAtRepeat(true);
 			processContigTerminus(node, counts, contig);
@@ -211,7 +224,7 @@ public class Assembler {
 					counts.incrementEdgeCounts(edge.getCount());
 					Contig contigBranch = new Contig(contig);
 					Set<Node> visitedNodesBranch = new HashSet<Node>(visitedNodes);
-					buildContig(edge.getTo(), visitedNodesBranch, contigBranch, (Counts) counts.clone());
+					buildContig(edge.getTo(), visitedNodesBranch, contigBranch, (Counts) counts.clone(), depth++);
 				}				
 			}			
 		}
@@ -368,5 +381,18 @@ public class Assembler {
 		long e = System.currentTimeMillis();
 		
 		System.out.println("Elapsed secs: " + (e-s)/1000);
+	}
+	
+	static class DepthExceededException extends RuntimeException {
+
+		private int depth;
+		
+		public DepthExceededException(int depth) {
+			this.depth = depth;
+		}
+		
+		public int getDepth() {
+			return depth;
+		}
 	}
 }
