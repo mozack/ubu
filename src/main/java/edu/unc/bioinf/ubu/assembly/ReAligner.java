@@ -50,7 +50,17 @@ public class ReAligner {
 	
 	private String reference;
 	
+	private AssemblerSettings assemblerSettings;
+	
 	public void reAlign(String inputSam, String outputSam) throws Exception {
+		
+		System.out.println("input: " + inputSam);
+		System.out.println("output: " + outputSam);
+		System.out.println("regions: " + regionsGtf);
+		System.out.println("reference: " + reference);
+		System.out.println("working dir: " + tempDir);
+		System.out.println(assemblerSettings.getDescription());
+		
 		startMillis = System.currentTimeMillis();
 		
 		//String contigsFasta = outputPrefix + "_contigs.fasta";
@@ -273,11 +283,11 @@ public class ReAligner {
 	private void initAssembler() {
 		assembler = new Assembler();
 		
-		assembler.setKmerSize(33);
-		assembler.setMinEdgeFrequency(15);
-		assembler.setMinNodeFrequncy(15);
-		assembler.setMinContigLength(101);
-		assembler.setMinEdgeRatio(.05);
+		assembler.setKmerSize(assemblerSettings.getKmerSize());
+		assembler.setMinEdgeFrequency(assemblerSettings.getMinEdgeFrequency());
+		assembler.setMinNodeFrequncy(assemblerSettings.getMinNodeFrequncy());
+		assembler.setMinContigLength(assemblerSettings.getMinContigLength());
+		assembler.setMinEdgeRatio(assemblerSettings.getMinEdgeRatio());
 	}
 	
 	private void init() {
@@ -307,15 +317,29 @@ public class ReAligner {
 		this.tempDir = temp;
 	}
 	
+	public void setAssemblerSettings(AssemblerSettings settings) {
+		this.assemblerSettings = settings;
+	}
+	
 	public static void run(String[] args) throws Exception {
 		ReAlignerOptions options = new ReAlignerOptions();
 		options.parseOptions(args);
 		
 		if (options.isValid()) {
+			
+			AssemblerSettings assemblerSettings = new AssemblerSettings();
+			
+			assemblerSettings.setKmerSize(options.getKmerSize());
+			assemblerSettings.setMinContigLength(options.getMinContigLength());
+			assemblerSettings.setMinEdgeFrequency(options.getMinEdgeFrequency());
+			assemblerSettings.setMinNodeFrequncy(options.getMinNodeFrequency());
+			assemblerSettings.setMinEdgeRatio(options.getMinEdgeRatio());
+			
 			ReAligner realigner = new ReAligner();
 			realigner.setReference(options.getReference());
 			realigner.setRegionsGtf(options.getTargetRegionFile());
 			realigner.setTempDir(options.getWorkingDir());
+			realigner.setAssemblerSettings(assemblerSettings);
 			
 			long s = System.currentTimeMillis();
 			
@@ -332,13 +356,33 @@ public class ReAligner {
 		
 		long s = System.currentTimeMillis();
 		
-		String input     = args[0];
-		String output    = args[1];
-		String reference = args[2];
-		String regions   = args[3];
-		String tempDir   = args[4];
+		String input     = "/home/lisle/ayc/case4/tumor/chr15_99503528_99507968.bam";
+		String output    = "/home/lisle/ayc/case4/tumor/realigned.bam";
+		String reference = "/home/lisle/reference/chr15/chr15.fa";
+		String regions   = "/home/lisle/ayc/regions/chr15_99503528_99507968.gtf";
+		String tempDir   = "/home/lisle/ayc/case4/tumor/working";
 		
-		realigner.reAlign("/home/lisle/ayc/case0/round2/case0_tumor.bam", "/home/lisle/ayc/case0/round2/full.bam");
+		AssemblerSettings settings = new AssemblerSettings();
+		settings.setKmerSize(47);
+		settings.setMinContigLength(101);
+		settings.setMinEdgeFrequency(10);
+		settings.setMinNodeFrequncy(10);
+		settings.setMinEdgeRatio(.02);
+		
+		realigner.setAssemblerSettings(settings);
+		
+//		reference = "/home/lisle/reference/chr17/chr17.fa";
+//		regionsGtf = "/home/lisle/ayc/regions/chr17.gtf";
+//		tempDir = "/home/lisle/ayc/case0/round2/working1";
+
+		
+//		realigner.reAlign("/home/lisle/ayc/case0/round2/case0_tumor.bam", "/home/lisle/ayc/case0/round2/full.bam");
+		
+		realigner.setReference(reference);
+		realigner.setRegionsGtf(regions);
+		realigner.setTempDir(tempDir);
+		
+		realigner.reAlign(input, output);
 		
 		long e = System.currentTimeMillis();
 		

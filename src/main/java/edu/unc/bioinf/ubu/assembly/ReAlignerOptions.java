@@ -10,7 +10,7 @@ public class ReAlignerOptions extends Options {
 	private static final String REFERENCE = "ref";
 	private static final String TARGET_REGIONS = "targets";
 	private static final String WORKING_DIR = "working";
-	private static final String KMER_LENGTH = "kmer";
+	private static final String KMER_SIZE = "kmer";
 	private static final String MIN_EDGE_FREQUENCY = "mef";
 	private static final String MIN_NODE_FREQUENCY = "mnf";
 	private static final String MIN_EDGE_RATIO = "mer";
@@ -27,7 +27,12 @@ public class ReAlignerOptions extends Options {
             parser.accepts(OUTPUT_SAM, "Required output sam or bam file").withRequiredArg().ofType(String.class);
             parser.accepts(REFERENCE, "Genome reference location").withRequiredArg().ofType(String.class);
             parser.accepts(TARGET_REGIONS, "GTF containing target regions").withRequiredArg().ofType(String.class);
-            parser.accepts(WORKING_DIR, "Working directory for intermediate output").withRequiredArg().ofType(String.class);            
+            parser.accepts(WORKING_DIR, "Working directory for intermediate output").withRequiredArg().ofType(String.class);
+            parser.accepts(KMER_SIZE, "Assembly kmer size").withRequiredArg().ofType(Integer.class);
+            parser.accepts(MIN_EDGE_FREQUENCY, "Assembly minimum edge frequency").withRequiredArg().ofType(Integer.class);
+            parser.accepts(MIN_NODE_FREQUENCY, "Assembly minimum node frequency").withRequiredArg().ofType(Integer.class);
+            parser.accepts(MIN_EDGE_RATIO, "Assembly minimum edge ratio").withRequiredArg().ofType(Integer.class);
+            parser.accepts(MIN_CONTIG_LENGTH, "Assembly minimum contig length").withRequiredArg().ofType(Double.class);
     	}
     	
     	return parser;
@@ -85,6 +90,32 @@ public class ReAlignerOptions extends Options {
 	
 	public String getWorkingDir() {
 		return (String) getOptions().valueOf(WORKING_DIR);
+	}
+	
+//	private static final String KMER_SIZE = "kmer";
+//	private static final String MIN_EDGE_FREQUENCY = "mef";
+//	private static final String MIN_NODE_FREQUENCY = "mnf";
+//	private static final String MIN_EDGE_RATIO = "mer";
+//	private static final String MIN_CONTIG_LENGTH = "mcl";
+	
+	public int getKmerSize() {
+		return (Integer) getOptions().valueOf(KMER_SIZE);
+	}
+	
+	public int getMinEdgeFrequency() {
+		return (Integer) getOptions().valueOf(MIN_EDGE_FREQUENCY);
+	}
+	
+	public int getMinNodeFrequency() {
+		return (Integer) getOptions().valueOf(MIN_NODE_FREQUENCY);
+	}
+	
+	public double getMinEdgeRatio() {
+		return (Double) getOptions().valueOf(MIN_EDGE_RATIO);
+	}
+	
+	public int getMinContigLength() {
+		return (Integer) getOptions().valueOf(MIN_CONTIG_LENGTH);
 	}
 	
 	public boolean isValid() {
