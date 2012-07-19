@@ -200,7 +200,7 @@ public class Assembler {
 	
 	private void buildContig(Node node, Set<Node> visitedNodes, Contig contig, Counts counts, int depth) {
 		
-		if (depth > 500) {
+		if (depth > 5000) {
 			throw new DepthExceededException(depth);
 		}
 		
