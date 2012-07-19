@@ -48,6 +48,8 @@ public class Assembler {
 	private List<Contig> contigs = new ArrayList<Contig>();
 	
 	private BufferedWriter writer;
+	
+	private int potentialContigCount = 0;
 		
 	public List<Contig> assembleContigs(String inputSam, String output) throws FileNotFoundException, IOException {
         SAMFileReader reader = new SAMFileReader(new File(inputSam));
@@ -77,6 +79,8 @@ public class Assembler {
 			outputContigs();
 		} catch (DepthExceededException e) {
 			System.out.println("DEPTH EXCEEDED for : " + inputSam);
+		} catch (TooManyPotentialContigsException e) {
+			System.out.println("TOO MANY CONTIGS for : " + inputSam);
 		}
 		
 		writer.close();
@@ -170,7 +174,9 @@ public class Assembler {
 	}
 	
 	private void buildContigs() {
-		System.out.println("Num starting nodes: " + rootNodes.size());
+		System.out.println("Num root nodes: " + rootNodes.size());
+		
+		potentialContigCount = rootNodes.size();
 		
 		for (Node node : rootNodes) {
 			//StringBuffer contig = new StringBuffer();
@@ -204,6 +210,10 @@ public class Assembler {
 			throw new DepthExceededException(depth);
 		}
 		
+		if (potentialContigCount > 500) {
+			throw new TooManyPotentialContigsException();
+		}
+		
 		depth += 1;
 		
 		if (visitedNodes.contains(node)) {
@@ -221,13 +231,15 @@ public class Assembler {
 				// Append current character
 				contig.append(node, Character.toString(node.getSequence().charAt(0)));
 				
+				potentialContigCount += edges.size() - 1;
+				
 				// Create a new contig branch for each edge
 				for (Edge edge : edges) {
 					counts.incrementEdgeCounts(edge.getCount());
 					Contig contigBranch = new Contig(contig);
 					Set<Node> visitedNodesBranch = new HashSet<Node>(visitedNodes);
 					buildContig(edge.getTo(), visitedNodesBranch, contigBranch, (Counts) counts.clone(), depth);
-				}				
+				}
 			}			
 		}
 	} 
@@ -396,5 +408,9 @@ public class Assembler {
 		public int getDepth() {
 			return depth;
 		}
+	}
+	
+	static class TooManyPotentialContigsException extends RuntimeException {
+		
 	}
 }
