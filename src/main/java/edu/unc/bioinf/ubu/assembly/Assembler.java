@@ -204,6 +204,8 @@ public class Assembler {
 			throw new DepthExceededException(depth);
 		}
 		
+		depth += 1;
+		
 		if (visitedNodes.contains(node)) {
 			counts.setTerminatedAtRepeat(true);
 			processContigTerminus(node, counts, contig);
@@ -224,7 +226,7 @@ public class Assembler {
 					counts.incrementEdgeCounts(edge.getCount());
 					Contig contigBranch = new Contig(contig);
 					Set<Node> visitedNodesBranch = new HashSet<Node>(visitedNodes);
-					buildContig(edge.getTo(), visitedNodesBranch, contigBranch, (Counts) counts.clone(), depth++);
+					buildContig(edge.getTo(), visitedNodesBranch, contigBranch, (Counts) counts.clone(), depth);
 				}				
 			}			
 		}
