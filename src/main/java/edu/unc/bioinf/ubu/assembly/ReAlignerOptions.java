@@ -31,8 +31,8 @@ public class ReAlignerOptions extends Options {
             parser.accepts(KMER_SIZE, "Assembly kmer size").withRequiredArg().ofType(Integer.class);
             parser.accepts(MIN_EDGE_FREQUENCY, "Assembly minimum edge frequency").withRequiredArg().ofType(Integer.class);
             parser.accepts(MIN_NODE_FREQUENCY, "Assembly minimum node frequency").withRequiredArg().ofType(Integer.class);
-            parser.accepts(MIN_EDGE_RATIO, "Assembly minimum edge ratio").withRequiredArg().ofType(Integer.class);
-            parser.accepts(MIN_CONTIG_LENGTH, "Assembly minimum contig length").withRequiredArg().ofType(Double.class);
+            parser.accepts(MIN_EDGE_RATIO, "Assembly minimum edge ratio").withRequiredArg().ofType(Double.class);
+            parser.accepts(MIN_CONTIG_LENGTH, "Assembly minimum contig length").withRequiredArg().ofType(Integer.class);
     	}
     	
     	return parser;
