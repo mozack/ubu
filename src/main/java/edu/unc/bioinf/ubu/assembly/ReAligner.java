@@ -288,6 +288,8 @@ public class ReAligner {
 		assembler.setMinNodeFrequncy(assemblerSettings.getMinNodeFrequncy());
 		assembler.setMinContigLength(assemblerSettings.getMinContigLength());
 		assembler.setMinEdgeRatio(assemblerSettings.getMinEdgeRatio());
+		assembler.setMaxPotentialContigs(assemblerSettings.getMaxPotentialContigs());
+		assembler.setMinContigRatio(assemblerSettings.getMinContigRatio());
 	}
 	
 	private void init() {
@@ -334,6 +336,8 @@ public class ReAligner {
 			assemblerSettings.setMinEdgeFrequency(options.getMinEdgeFrequency());
 			assemblerSettings.setMinNodeFrequncy(options.getMinNodeFrequency());
 			assemblerSettings.setMinEdgeRatio(options.getMinEdgeRatio());
+			assemblerSettings.setMaxPotentialContigs(options.getMaxPotentialContigs());
+			assemblerSettings.setMinContigRatio(options.getMinContigRatio());
 			
 			ReAligner realigner = new ReAligner();
 			realigner.setReference(options.getReference());

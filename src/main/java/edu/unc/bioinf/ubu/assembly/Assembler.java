@@ -37,7 +37,11 @@ public class Assembler {
 	private int minNodeFrequncy;
 
 	private int minContigLength;
+	private double minContigRatio;
+	
 	private double minEdgeRatio;
+	
+	private int maxPotentialContigs = 500;
 	
 	private int minMergeSize = 25;
 	
@@ -50,6 +54,8 @@ public class Assembler {
 	private BufferedWriter writer;
 	
 	private int potentialContigCount = 0;
+	
+	private long regionLength;
 		
 	public List<Contig> assembleContigs(String inputSam, String output) throws FileNotFoundException, IOException {
         SAMFileReader reader = new SAMFileReader(new File(inputSam));
@@ -57,14 +63,28 @@ public class Assembler {
 
 		writer = new BufferedWriter(new FileWriter(output, false));
 		
+		long regionStart = Long.MAX_VALUE;
+		long regionEnd   = -1;
+		
 		int numRecs = 0;
 		
 		for (SAMRecord read : reader) {
 			addToGraph(read);
 			numRecs++;
+			
+			if (read.getAlignmentStart() < regionStart) {
+				regionStart = read.getAlignmentStart();
+			}
+			
+			if (read.getAlignmentEnd() > regionEnd) {
+				regionEnd = read.getAlignmentEnd();
+			}
 		}
 		
+		regionLength = regionEnd - regionStart;
+		
 		System.out.println("Num records: " + numRecs + ", Num nodes: " + nodes.size());
+		System.out.println("Region length: " + regionLength);
 				
 //		printEdgeCounts();
 		
@@ -107,6 +127,14 @@ public class Assembler {
 	
 	public void setMinEdgeRatio(double minEdgeRatio) {
 		this.minEdgeRatio = minEdgeRatio;
+	}
+	
+	public void setMaxPotentialContigs(int maxContigs) {
+		this.maxPotentialContigs = maxContigs;
+	}
+	
+	public void setMinContigRatio(double minContigRatio) {
+		this.minContigRatio = minContigRatio;
 	}
 
 	private void filterLowFrequencyNodes() {
@@ -155,6 +183,8 @@ public class Assembler {
 	
 	private void outputContigs() throws IOException {
 		
+		System.out.println("Writing " + contigs.size() + " contigs.");
+		
 		int count = 0;
 		
 		for (Contig contig : contigs) {
@@ -185,6 +215,8 @@ public class Assembler {
 			Counts counts = new Counts();
 			buildContig(node, visitedNodes, contig, counts);
 		}
+		
+		System.out.println("Potential contig count: " + potentialContigCount);
 	}
 	
 	private void processContigTerminus(Node node, Counts counts, Contig contig) {
@@ -194,7 +226,8 @@ public class Assembler {
 			contig.append(node, node.getSequence());
 		}
 		
-		if (contig.getSequence().length() >= minContigLength) {
+		if ((contig.getSequence().length() >= minContigLength) &&
+			((double) contig.getSequence().length() / (double) regionLength >= minContigRatio)) {
 			contig.setDescriptor(counts.toString());
 			contigs.add(contig);
 		}
@@ -210,7 +243,7 @@ public class Assembler {
 			throw new DepthExceededException(depth);
 		}
 		
-		if (potentialContigCount > 500) {
+		if (potentialContigCount > maxPotentialContigs) {
 			throw new TooManyPotentialContigsException();
 		}
 		
@@ -361,6 +394,24 @@ public class Assembler {
 		long s = System.currentTimeMillis();
 		
 		Assembler ayc = new Assembler();
+		//22
+//		ayc.setKmerSize(33);
+//		ayc.setMinEdgeFrequency(3);
+//		ayc.setMinNodeFrequncy(3);
+//		ayc.setMinContigLength(100);
+//		ayc.setMinEdgeRatio(.015);
+//		ayc.setMaxPotentialContigsPerRegion(1500);
+//		ayc.setMinContigToRegionRatio(.75);
+		
+		ayc.setKmerSize(33);
+		ayc.setMinEdgeFrequency(3);
+		ayc.setMinNodeFrequncy(3);
+		ayc.setMinContigLength(100);
+		ayc.setMinEdgeRatio(.015);
+		ayc.setMaxPotentialContigs(30000);
+		ayc.setMinContigRatio(.5);
+		
+		ayc.assembleContigs("/home/lisle/ayc/sim/sim1/chr21/chr21_37236845_37237045.bam", "/home/lisle/ayc/sim/sim1/chr21/1.fasta");
 		
 //		ayc.assemble("/home/lisle/ayc/case0/normal_7576572_7577692.fastq", "/home/lisle/ayc/case0/normal_33_05.fasta");
 //		ayc.assemble("/home/lisle/ayc/case0/tumor_7576572_7577692.fastq", "/home/lisle/ayc/case0/tumor_33_05.fasta");

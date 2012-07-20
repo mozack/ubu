@@ -15,6 +15,9 @@ public class ReAlignerOptions extends Options {
 	private static final String MIN_NODE_FREQUENCY = "mnf";
 	private static final String MIN_EDGE_RATIO = "mer";
 	private static final String MIN_CONTIG_LENGTH = "mcl";
+	private static final String MAX_POTENTIAL_CONTIGS = "mpc";
+	private static final String MIN_CONTIG_RATIO = "mcr";
+	
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -33,6 +36,8 @@ public class ReAlignerOptions extends Options {
             parser.accepts(MIN_NODE_FREQUENCY, "Assembly minimum node frequency").withRequiredArg().ofType(Integer.class);
             parser.accepts(MIN_EDGE_RATIO, "Assembly minimum edge ratio").withRequiredArg().ofType(Double.class);
             parser.accepts(MIN_CONTIG_LENGTH, "Assembly minimum contig length").withRequiredArg().ofType(Integer.class);
+            parser.accepts(MAX_POTENTIAL_CONTIGS, "Maximum number of potential contigs for a region").withRequiredArg().ofType(Integer.class);
+            parser.accepts(MIN_CONTIG_RATIO, "Minimum contig length as percentage of observed region length").withRequiredArg().ofType(Double.class);
     	}
     	
     	return parser;
@@ -116,6 +121,14 @@ public class ReAlignerOptions extends Options {
 	
 	public int getMinContigLength() {
 		return (Integer) getOptions().valueOf(MIN_CONTIG_LENGTH);
+	}
+	
+	public int getMaxPotentialContigs() {
+		return (Integer) getOptions().valueOf(MAX_POTENTIAL_CONTIGS);
+	}
+	
+	public double getMinContigRatio() {
+		return (Double) getOptions().valueOf(MIN_CONTIG_RATIO);
 	}
 	
 	public boolean isValid() {
