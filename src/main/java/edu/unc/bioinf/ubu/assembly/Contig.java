@@ -68,6 +68,11 @@ public class Contig {
 		return Collections.unmodifiableList(nodes);
 	}
 	
+	/**
+	 * Returns information about each read that contributed to this Contig and
+	 * the location of the read within the contig.  Only those reads that exactly
+	 * match the contig are included. 
+	 */
 	public List<ReadPosition> getFilteredReadPositions() {
 		List<ReadPosition> readPositions = new ArrayList<ReadPosition>();
 		int index = 0;

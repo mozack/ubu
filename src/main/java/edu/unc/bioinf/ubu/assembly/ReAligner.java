@@ -201,7 +201,7 @@ public class ReAligner {
         	List<ReadPosition> readPositions = contig.getFilteredReadPositions();
         	for (ReadPosition readPosition : readPositions) {
         		//TODO: Handle multi-mappers (update XH tags?)
-    			SAMRecord updatedRead = updateReadAlignment(contigReadBlocks, readPosition);
+    			SAMRecord updatedRead = updateReadAlignment(contigRead, contigReadBlocks, readPosition);
     			if (updatedRead != null) {
     				updatedReads.add(updatedRead);
     			}
@@ -209,9 +209,11 @@ public class ReAligner {
         }
 	}
 
-	SAMRecord updateReadAlignment(List<ReadBlock> contigReadBlocks, ReadPosition orig) {
+	SAMRecord updateReadAlignment(SAMRecord contigRead, List<ReadBlock> contigReadBlocks, ReadPosition orig) {
 		List<ReadBlock> blocks = new ArrayList<ReadBlock>();
 		SAMRecord read = cloneRead(orig.getRead());
+		
+		read.setReferenceName(contigRead.getReferenceName());
 		
 		int contigPosition = orig.getPosition();
 		int accumulatedLength = 0;
@@ -360,18 +362,20 @@ public class ReAligner {
 		
 		long s = System.currentTimeMillis();
 		
-		String input     = "/home/lisle/ayc/case4/tumor/chr15_99503528_99507968.bam";
-		String output    = "/home/lisle/ayc/case4/tumor/realigned.bam";
-		String reference = "/home/lisle/reference/chr15/chr15.fa";
-		String regions   = "/home/lisle/ayc/regions/chr15_99503528_99507968.gtf";
-		String tempDir   = "/home/lisle/ayc/case4/tumor/working";
+		String input     = "/home/lisle/ayc/sim/sim1/bug/chr8_141889351_141889791.bam";
+		String output    = "/home/lisle/ayc/sim/sim1/bug/realigned.bam";
+		String reference = "/home/lisle/reference/chr8/chr8.fa";
+		String regions   = "/home/lisle/ayc/regions/chr8_141889351_141889791.gtf";
+		String tempDir   = "/home/lisle/ayc/sim/sim1/bug/working";
 		
 		AssemblerSettings settings = new AssemblerSettings();
-		settings.setKmerSize(47);
-		settings.setMinContigLength(101);
-		settings.setMinEdgeFrequency(10);
-		settings.setMinNodeFrequncy(10);
-		settings.setMinEdgeRatio(.02);
+		settings.setKmerSize(33);
+		settings.setMinContigLength(100);
+		settings.setMinEdgeFrequency(3);
+		settings.setMinNodeFrequncy(3);
+		settings.setMinEdgeRatio(.015);
+		settings.setMaxPotentialContigs(30000);
+		settings.setMinContigRatio(.50);
 		
 		realigner.setAssemblerSettings(settings);
 		
