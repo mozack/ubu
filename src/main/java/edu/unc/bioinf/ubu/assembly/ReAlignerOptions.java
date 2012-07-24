@@ -17,6 +17,7 @@ public class ReAlignerOptions extends Options {
 	private static final String MIN_CONTIG_LENGTH = "mcl";
 	private static final String MAX_POTENTIAL_CONTIGS = "mpc";
 	private static final String MIN_CONTIG_RATIO = "mcr";
+	private static final String NUM_THREADS = "threads";
 	
 	
 	private OptionParser parser;
@@ -38,6 +39,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(MIN_CONTIG_LENGTH, "Assembly minimum contig length").withRequiredArg().ofType(Integer.class);
             parser.accepts(MAX_POTENTIAL_CONTIGS, "Maximum number of potential contigs for a region").withRequiredArg().ofType(Integer.class);
             parser.accepts(MIN_CONTIG_RATIO, "Minimum contig length as percentage of observed region length").withRequiredArg().ofType(Double.class);
+            parser.accepts(NUM_THREADS, "Number of threads").withRequiredArg().ofType(Integer.class);
     	}
     	
     	return parser;
@@ -70,6 +72,11 @@ public class ReAlignerOptions extends Options {
 		if (!getOptions().hasArgument(WORKING_DIR)) {
 			isValid = false;
 			System.out.println("Missing required working directory");
+		}
+		
+		if ((Integer) getOptions().valueOf(NUM_THREADS) < 1) {
+			isValid = false;
+			System.out.println("Num threads must be greater than zero.");
 		}
 		
         if (!isValid) {
@@ -129,6 +136,10 @@ public class ReAlignerOptions extends Options {
 	
 	public double getMinContigRatio() {
 		return (Double) getOptions().valueOf(MIN_CONTIG_RATIO);
+	}
+	
+	public int getNumThreads() {
+		return (Integer) getOptions().valueOf(NUM_THREADS);
 	}
 	
 	public boolean isValid() {
