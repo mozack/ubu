@@ -189,7 +189,12 @@ public class ReAligner {
 	}
 	
 	private void waitForAllThreadsToComplete() throws InterruptedException {
+		long start = System.currentTimeMillis();
 		while (threads.size() > 0) {
+			long curr = System.currentTimeMillis();
+			if (((curr - start) / 1000) > 30) {
+				log("Waiting on " + threads.size() + " threads.");
+			}
 			Thread.sleep(500);
 		}
 	}
@@ -204,12 +209,18 @@ public class ReAligner {
 	private void outputRegion(Feature region) {
 		String regionBam  = tempDir + "/" + region.getDescriptor() + "_output.bam";
 		
-        SAMFileReader reader = new SAMFileReader(new File(regionBam));
-        reader.setValidationStringency(ValidationStringency.SILENT);
-
-        for (SAMRecord read : reader) {
-        	outputReadsBam.addAlignment(read);
-        }
+		File regionFile = new File(regionBam);
+		
+		if (regionFile.exists()) {
+	        SAMFileReader reader = new SAMFileReader(new File(regionBam));
+	        reader.setValidationStringency(ValidationStringency.SILENT);
+	
+	        for (SAMRecord read : reader) {
+	        	outputReadsBam.addAlignment(read);
+	        }
+	        
+	        reader.close();
+		}
 	}
 
 	public void processRegion(Feature region, String inputSam) throws InterruptedException, IOException {
