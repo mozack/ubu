@@ -51,6 +51,10 @@ public class ReAligner {
 	private String tempDir;
 
 	private String reference;
+	
+	private String referenceDir;
+	
+	private int minContigMapq;
 
 	private AssemblerSettings assemblerSettings;
 	
@@ -133,7 +137,9 @@ public class ReAligner {
 		System.out.println("output: " + outputSam);
 		System.out.println("regions: " + regionsGtf);
 		System.out.println("reference: " + reference);
+		System.out.println("reference: " + referenceDir);
 		System.out.println("working dir: " + tempDir);
+		System.out.println("num threads: " + numThreads);
 		System.out.println(assemblerSettings.getDescription());
 
 		startMillis = System.currentTimeMillis();
@@ -222,6 +228,18 @@ public class ReAligner {
 	        reader.close();
 		}
 	}
+	
+	private Aligner buildAligner(Feature region) {
+		Aligner aligner;
+		
+		if (reference != null) {
+			aligner = new Aligner(reference);
+		} else {
+			aligner = new Aligner(referenceDir + "/" + region.getSeqname() + ".fa");
+		}
+		
+		return aligner;
+	}
 
 	public void processRegion(Feature region, String inputSam) throws InterruptedException, IOException {
 		
@@ -236,7 +254,8 @@ public class ReAligner {
 		
 //		log("Initializing assembler");
 		Assembler assem = newAssembler();
-		Aligner aligner = new Aligner(reference);
+		
+		Aligner aligner = buildAligner(region);
 		
 //		log("Assembling contigs");
 		List<Contig> contigs = assem.assembleContigs(targetRegionBam, contigsFasta);
@@ -343,17 +362,18 @@ public class ReAligner {
 
 		for (SAMRecord contigRead : reader) {
 
-			List<ReadBlock> contigReadBlocks = ReadBlock
-					.getReadBlocks(contigRead);
-			Contig contig = contigMap.get(contigRead.getReadName());
-			List<ReadPosition> readPositions = contig
-					.getFilteredReadPositions();
-			for (ReadPosition readPosition : readPositions) {
-				// TODO: Handle multi-mappers (update XH tags?)
-				SAMRecord updatedRead = updateReadAlignment(contigRead,
-						contigReadBlocks, readPosition);
-				if (updatedRead != null) {
-					updatedReads.add(updatedRead);
+			if (contigRead.getMappingQuality() >= minContigMapq) {
+				List<ReadBlock> contigReadBlocks = ReadBlock.getReadBlocks(contigRead);
+				Contig contig = contigMap.get(contigRead.getReadName());
+				List<ReadPosition> readPositions = contig.getFilteredReadPositions();
+				
+				for (ReadPosition readPosition : readPositions) {
+					// TODO: Handle multi-mappers (update XH tags?)
+					SAMRecord updatedRead = updateReadAlignment(contigRead,
+							contigReadBlocks, readPosition);
+					if (updatedRead != null) {
+						updatedReads.add(updatedRead);
+					}
 				}
 			}
 		}
@@ -503,6 +523,10 @@ public class ReAligner {
 	public void setReference(String reference) {
 		this.reference = reference;
 	}
+	
+	public void setReferenceDir(String referenceDir) {
+		this.referenceDir = referenceDir;
+	}
 
 	public void setTempDir(String temp) {
 		this.tempDir = temp;
@@ -514,6 +538,10 @@ public class ReAligner {
 	
 	public void setNumThreads(int numThreads) {
 		this.numThreads = numThreads;
+	}
+	
+	public void setMinContigMapq(int minContigMapq) {
+		this.minContigMapq = minContigMapq;
 	}
 
 	public static void run(String[] args) throws Exception {
@@ -536,10 +564,12 @@ public class ReAligner {
 
 			ReAligner realigner = new ReAligner();
 			realigner.setReference(options.getReference());
+			realigner.setReferenceDir(options.getReferenceDir());
 			realigner.setRegionsGtf(options.getTargetRegionFile());
 			realigner.setTempDir(options.getWorkingDir());
 			realigner.setAssemblerSettings(assemblerSettings);
 			realigner.setNumThreads(options.getNumThreads());
+			realigner.setMinContigMapq(options.getMinContigMapq());
 
 			long s = System.currentTimeMillis();
 
