@@ -21,11 +21,10 @@ public class Node {
 	
 	private Set<SAMRecord> startingReads = new HashSet<SAMRecord>();
 	
-	private String source;
+	private Set<String> uniqueReadSequences = new HashSet<String>();
 	
-	public Node(String sequence, String source) {
+	public Node(String sequence) {
 		this.sequence = sequence;
-		this.source = source;
 	}
 	
 	public String toString() {
@@ -65,8 +64,8 @@ public class Node {
 		this.startingReads.add(read);
 	}
 	
-	public String getSource() {
-		return source;
+	public void addReadSequence(String sequence) {
+		uniqueReadSequences.add(sequence);
 	}
 	
 	private void printMultiEdges() {
@@ -134,6 +133,10 @@ public class Node {
 		}
 		
 		return frequentEdges;
+	}
+	
+	public int getUniqueReadCount() {
+		return uniqueReadSequences.size();
 	}
 	
 	public Edge getMostCommonEdge() {
