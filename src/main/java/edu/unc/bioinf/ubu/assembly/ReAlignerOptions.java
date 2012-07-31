@@ -20,6 +20,7 @@ public class ReAlignerOptions extends Options {
 	private static final String MIN_CONTIG_RATIO = "mcr";
 	private static final String MIN_CONTIG_MAPQ = "mc-mapq";
 	private static final String NUM_THREADS = "threads";
+	private static final String MIN_UNIQUE_READS = "mur";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -43,6 +44,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(MIN_CONTIG_RATIO, "Minimum contig length as percentage of observed region length").withRequiredArg().ofType(Double.class);
             parser.accepts(NUM_THREADS, "Number of threads").withRequiredArg().ofType(Integer.class);
             parser.accepts(MIN_CONTIG_MAPQ, "Minimum contig mapping quality").withRequiredArg().ofType(Integer.class);
+            parser.accepts(MIN_UNIQUE_READS, "Minimum number of unique reads per node").withRequiredArg().ofType(Integer.class);
     	}
     	
     	return parser;
@@ -150,6 +152,10 @@ public class ReAlignerOptions extends Options {
 	
 	public int getMinContigMapq() {
 		return (Integer) getOptions().valueOf(MIN_CONTIG_MAPQ);
+	}
+	
+	public int getMinUniqueReads() {
+		return (Integer) getOptions().valueOf(MIN_UNIQUE_READS);
 	}
 	
 	public boolean isValid() {

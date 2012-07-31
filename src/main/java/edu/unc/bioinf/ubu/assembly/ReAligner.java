@@ -482,6 +482,7 @@ public class ReAligner {
 		assem.setMaxPotentialContigs(assemblerSettings
 				.getMaxPotentialContigs());
 		assem.setMinContigRatio(assemblerSettings.getMinContigRatio());
+		assem.setMinUniqueReads(assemblerSettings.getMinUniqueReads());
 
 		return assem;
 	}
@@ -561,6 +562,7 @@ public class ReAligner {
 			assemblerSettings.setMaxPotentialContigs(options
 					.getMaxPotentialContigs());
 			assemblerSettings.setMinContigRatio(options.getMinContigRatio());
+			assemblerSettings.setMinUniqueReads(options.getMinUniqueReads());
 
 			ReAligner realigner = new ReAligner();
 			realigner.setReference(options.getReference());
@@ -586,22 +588,33 @@ public class ReAligner {
 
 		long s = System.currentTimeMillis();
 
+		String input = "/home/lisle/ayc/sim/sim261/sorted.bam";
+		String output = "/home/lisle/ayc/sim/sim261/realigned.bam";
+		String reference = "/home/lisle/reference/chr13/chr13.fa";
+		String regions = "/home/lisle/ayc/regions/chr13_261.gtf";
+		String tempDir = "/home/lisle/ayc/sim/sim261/working";
+/*		
 		String input = "/home/lisle/ayc/sim/sim1/bug/chr8_141889351_141889791.bam";
 		String output = "/home/lisle/ayc/sim/sim1/bug/realigned.bam";
 		String reference = "/home/lisle/reference/chr8/chr8.fa";
 		String regions = "/home/lisle/ayc/regions/chr8_141889351_141889791.gtf";
 		String tempDir = "/home/lisle/ayc/sim/sim1/bug/working";
+*/
+
 
 		AssemblerSettings settings = new AssemblerSettings();
 		settings.setKmerSize(33);
 		settings.setMinContigLength(100);
-		settings.setMinEdgeFrequency(3);
-		settings.setMinNodeFrequncy(3);
-		settings.setMinEdgeRatio(.015);
+		settings.setMinEdgeFrequency(7);
+		settings.setMinNodeFrequncy(7);
+		settings.setMinEdgeRatio(.02);
 		settings.setMaxPotentialContigs(30000);
 		settings.setMinContigRatio(.50);
+		settings.setMinUniqueReads(2);
 
 		realigner.setAssemblerSettings(settings);
+		
+		realigner.setMinContigMapq(1);
 
 		// reference = "/home/lisle/reference/chr17/chr17.fa";
 		// regionsGtf = "/home/lisle/ayc/regions/chr17.gtf";
@@ -613,6 +626,7 @@ public class ReAligner {
 		realigner.setReference(reference);
 		realigner.setRegionsGtf(regions);
 		realigner.setTempDir(tempDir);
+		realigner.setNumThreads(1);
 
 		realigner.reAlign(input, output);
 

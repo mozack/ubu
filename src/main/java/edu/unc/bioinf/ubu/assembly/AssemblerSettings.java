@@ -9,6 +9,7 @@ public class AssemblerSettings {
 	private double minEdgeRatio;
 	private int maxPotentialContigs;
 	private double minContigRatio;
+	private int minUniqueReads;
 		
 	public int getKmerSize() {
 		return kmerSize;
@@ -66,6 +67,14 @@ public class AssemblerSettings {
 		this.minContigRatio = minContigRatio;
 	}
 	
+	public int getMinUniqueReads() {
+		return minUniqueReads;
+	}
+	
+	public void setMinUniqueReads(int minUniqueReads) {
+		this.minUniqueReads = minUniqueReads;
+	}
+	
 	public String getDescription() {
 		StringBuffer str = new StringBuffer();
 		
@@ -76,6 +85,7 @@ public class AssemblerSettings {
 		appendSetting(str, "minEdgeRatio", minEdgeRatio);
 		appendSetting(str, "maxPotentialContigs", maxPotentialContigs);
 		appendSetting(str, "minContigRatio", minContigRatio);
+		appendSetting(str, "minUniqueReads", minUniqueReads);
 		
 		return str.toString();
 	}

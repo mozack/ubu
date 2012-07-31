@@ -41,9 +41,12 @@ public class Assembler {
 	
 	private double minEdgeRatio;
 	
+	private int minUniqueReads = 1;
+	
 	private int maxPotentialContigs = 500;
 	
 	private int minMergeSize = 25;
+	
 	
 	private Map<String, Node> nodes = new HashMap<String, Node>();
 	
@@ -136,12 +139,18 @@ public class Assembler {
 	public void setMinContigRatio(double minContigRatio) {
 		this.minContigRatio = minContigRatio;
 	}
+	
+	public void setMinUniqueReads(int minUniqueReads) {
+		this.minUniqueReads = minUniqueReads;
+	}
 
 	private void filterLowFrequencyNodes() {
 		List<Node> nodesToFilter = new ArrayList<Node>();
 		
 		for (Node node : nodes.values()) {
 			if (node.getCount() < minNodeFrequncy) {
+				nodesToFilter.add(node);
+			} else if (node.getUniqueReadCount() < this.minUniqueReads) {
 				nodesToFilter.add(node);
 			}
 		}
@@ -370,11 +379,13 @@ public class Assembler {
 			String kmer = sequence.substring(i, i+kmerSize);
 			Node node = nodes.get(kmer);
 			if (node == null) {
-				node = new Node(kmer, sequence);
+				node = new Node(kmer);
 				nodes.put(kmer, node);
 			} else {
 				node.incrementCount();
 			}
+			
+			node.addReadSequence(sequence);
 			
 			if (prev != null) {
 				prev.addToEdge(node);
