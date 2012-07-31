@@ -202,7 +202,7 @@ public class ReAligner {
 		long start = System.currentTimeMillis();
 		while (activeThreads() > 0) {
 			long curr = System.currentTimeMillis();
-			if (((curr - start) / 1000) > 30) {
+			if (((curr - start) / 1000) > 30000) {
 				log("Waiting on " + threads.size() + " threads.");
 			}
 			Thread.sleep(500);
