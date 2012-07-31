@@ -188,15 +188,19 @@ public class ReAligner {
 		threads.remove(thread);
 	}
 	
+	private synchronized int activeThreads() {
+		return threads.size();
+	}
+	
 	private void waitForAvailableThread() throws InterruptedException {
-		while (threads.size() == numThreads) {
+		while (activeThreads() == numThreads) {
 			Thread.sleep(500);
 		}
 	}
 	
 	private void waitForAllThreadsToComplete() throws InterruptedException {
 		long start = System.currentTimeMillis();
-		while (threads.size() > 0) {
+		while (activeThreads() > 0) {
 			long curr = System.currentTimeMillis();
 			if (((curr - start) / 1000) > 30) {
 				log("Waiting on " + threads.size() + " threads.");
