@@ -73,7 +73,7 @@ public class Contig {
 	 * the location of the read within the contig.  Only those reads that exactly
 	 * match the contig are included. 
 	 */
-	public List<ReadPosition> getFilteredReadPositions() {
+	public List<ReadPosition> getFilteredReadPositions(int allowedMismatchesFromContig) {
 		List<ReadPosition> readPositions = new ArrayList<ReadPosition>();
 		int index = 0;
 		
@@ -86,7 +86,8 @@ public class Contig {
 				if (sequence.length() >= index + readSequence.length()) {
 					String contigSubstring = sequence.substring(index, index+readSequence.length());
 					
-					if (contigSubstring.equals(readSequence)) {
+					//if (contigSubstring.equals(readSequence)) {
+					if (SequenceUtil.isMatch(contigSubstring, readSequence, allowedMismatchesFromContig)) {
 						// We have a match, record this read's position in the contig
 						readPositions.add(new ReadPosition(read, index));
 					}

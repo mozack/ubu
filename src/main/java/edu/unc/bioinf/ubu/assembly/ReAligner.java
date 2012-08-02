@@ -60,6 +60,8 @@ public class ReAligner {
 	
 	private int numThreads;
 	
+	private int allowedMismatchesFromContig = 0;
+	
 	private List<ReAlignerRunnable> threads = new ArrayList<ReAlignerRunnable>();
 
 	/*
@@ -201,8 +203,8 @@ public class ReAligner {
 	private void waitForAllThreadsToComplete() throws InterruptedException {
 		long start = System.currentTimeMillis();
 		while (activeThreads() > 0) {
-			long curr = System.currentTimeMillis();
-			if (((curr - start) / 1000) > 60) {
+			long elapsedSecs = (System.currentTimeMillis() - start) / 1000;
+			if ((elapsedSecs % 60) == 0) {
 				log("Waiting on " + threads.size() + " threads.");
 			}
 			Thread.sleep(500);
@@ -369,7 +371,7 @@ public class ReAligner {
 			if (contigRead.getMappingQuality() >= minContigMapq) {
 				List<ReadBlock> contigReadBlocks = ReadBlock.getReadBlocks(contigRead);
 				Contig contig = contigMap.get(contigRead.getReadName());
-				List<ReadPosition> readPositions = contig.getFilteredReadPositions();
+				List<ReadPosition> readPositions = contig.getFilteredReadPositions(allowedMismatchesFromContig);
 				
 				for (ReadPosition readPosition : readPositions) {
 					// TODO: Handle multi-mappers (update XH tags?)
@@ -548,6 +550,10 @@ public class ReAligner {
 	public void setMinContigMapq(int minContigMapq) {
 		this.minContigMapq = minContigMapq;
 	}
+	
+	public void setAllowedMismatchesFromContig(int allowedMismatchesFromContig) {
+		this.allowedMismatchesFromContig = allowedMismatchesFromContig;
+	}
 
 	public static void run(String[] args) throws Exception {
 		ReAlignerOptions options = new ReAlignerOptions();
@@ -576,6 +582,7 @@ public class ReAligner {
 			realigner.setAssemblerSettings(assemblerSettings);
 			realigner.setNumThreads(options.getNumThreads());
 			realigner.setMinContigMapq(options.getMinContigMapq());
+			realigner.setAllowedMismatchesFromContig(options.getAllowedMismatchesFromContig());
 
 			long s = System.currentTimeMillis();
 
@@ -591,12 +598,20 @@ public class ReAligner {
 		ReAligner realigner = new ReAligner();
 
 		long s = System.currentTimeMillis();
-
+		
+		String input = "/home/lisle/ayc/sim/sim261/chr16/sorted.bam";
+		String output = "/home/lisle/ayc/sim/sim261/chr16/realigned.bam";
+		String reference = "/home/lisle/reference/chr16/chr16.fa";
+		String regions = "/home/lisle/ayc/regions/chr16_261.gtf";
+		String tempDir = "/home/lisle/ayc/sim/sim261/chr16/working";
+		
+/*
 		String input = "/home/lisle/ayc/sim/sim261/sorted.bam";
 		String output = "/home/lisle/ayc/sim/sim261/realigned.bam";
 		String reference = "/home/lisle/reference/chr13/chr13.fa";
 		String regions = "/home/lisle/ayc/regions/chr13_261.gtf";
 		String tempDir = "/home/lisle/ayc/sim/sim261/working";
+*/
 /*		
 		String input = "/home/lisle/ayc/sim/sim1/bug/chr8_141889351_141889791.bam";
 		String output = "/home/lisle/ayc/sim/sim1/bug/realigned.bam";
@@ -607,18 +622,19 @@ public class ReAligner {
 
 
 		AssemblerSettings settings = new AssemblerSettings();
-		settings.setKmerSize(33);
-		settings.setMinContigLength(100);
+		settings.setKmerSize(39);
+		settings.setMinContigLength(10);
 		settings.setMinEdgeFrequency(7);
 		settings.setMinNodeFrequncy(7);
-		settings.setMinEdgeRatio(.02);
-		settings.setMaxPotentialContigs(30000);
-		settings.setMinContigRatio(.50);
+		settings.setMinEdgeRatio(.05);
+		settings.setMaxPotentialContigs(10000);
+		settings.setMinContigRatio(.5);
 		settings.setMinUniqueReads(2);
 
 		realigner.setAssemblerSettings(settings);
 		
 		realigner.setMinContigMapq(1);
+		realigner.setAllowedMismatchesFromContig(1);
 
 		// reference = "/home/lisle/reference/chr17/chr17.fa";
 		// regionsGtf = "/home/lisle/ayc/regions/chr17.gtf";

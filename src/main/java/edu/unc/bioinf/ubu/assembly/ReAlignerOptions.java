@@ -21,6 +21,7 @@ public class ReAlignerOptions extends Options {
 	private static final String MIN_CONTIG_MAPQ = "mc-mapq";
 	private static final String NUM_THREADS = "threads";
 	private static final String MIN_UNIQUE_READS = "mur";
+	private static final String ALLOWED_MISMATCHES_FROM_CONTIG = "amc";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -45,6 +46,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(NUM_THREADS, "Number of threads").withRequiredArg().ofType(Integer.class);
             parser.accepts(MIN_CONTIG_MAPQ, "Minimum contig mapping quality").withRequiredArg().ofType(Integer.class);
             parser.accepts(MIN_UNIQUE_READS, "Minimum number of unique reads per node").withRequiredArg().ofType(Integer.class);
+            parser.accepts(ALLOWED_MISMATCHES_FROM_CONTIG, "Maximum number of allowed mismatches from contig for a read (default zero).").withRequiredArg().ofType(Integer.class);
     	}
     	
     	return parser;
@@ -160,5 +162,9 @@ public class ReAlignerOptions extends Options {
 	
 	public boolean isValid() {
 		return isValid;
+	}
+	
+	public int getAllowedMismatchesFromContig() {
+		return (Integer) getOptions().valueOf(ALLOWED_MISMATCHES_FROM_CONTIG);
 	}
 }
