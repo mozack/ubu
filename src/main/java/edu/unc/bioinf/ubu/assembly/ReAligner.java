@@ -142,6 +142,7 @@ public class ReAligner {
 		System.out.println("reference: " + referenceDir);
 		System.out.println("working dir: " + tempDir);
 		System.out.println("num threads: " + numThreads);
+		System.out.println("allowed mismatches: " + allowedMismatchesFromContig);
 		System.out.println(assemblerSettings.getDescription());
 
 		startMillis = System.currentTimeMillis();
@@ -622,19 +623,19 @@ public class ReAligner {
 
 
 		AssemblerSettings settings = new AssemblerSettings();
-		settings.setKmerSize(39);
-		settings.setMinContigLength(10);
-		settings.setMinEdgeFrequency(7);
-		settings.setMinNodeFrequncy(7);
-		settings.setMinEdgeRatio(.05);
+		settings.setKmerSize(63);
+		settings.setMinContigLength(100);
+		settings.setMinEdgeFrequency(4);
+		settings.setMinNodeFrequncy(4);
+		settings.setMinEdgeRatio(.02);
 		settings.setMaxPotentialContigs(10000);
-		settings.setMinContigRatio(.5);
+		settings.setMinContigRatio(.3);
 		settings.setMinUniqueReads(2);
 
 		realigner.setAssemblerSettings(settings);
 		
 		realigner.setMinContigMapq(1);
-		realigner.setAllowedMismatchesFromContig(1);
+		realigner.setAllowedMismatchesFromContig(0);
 
 		// reference = "/home/lisle/reference/chr17/chr17.fa";
 		// regionsGtf = "/home/lisle/ayc/regions/chr17.gtf";
