@@ -272,7 +272,7 @@ public class ReAligner {
 			aligner.align(contigsFasta, contigsSam);
 			
 //			log("Adjusting reads");
-			adjustReads(contigsSam, contigs, updatedReads);
+			adjustReads(contigsSam, contigs, updatedReads, assem.allReads);
 			
 //			log("Writing adjusted reads");
 			writeOutputBam(updatedReads, outputBam);
@@ -358,7 +358,7 @@ public class ReAligner {
 	}
 
 	private void adjustReads(String contigSam, List<Contig> contigs,
-			Set<SAMRecord> updatedReads) {
+			Set<SAMRecord> updatedReads, List<SAMRecord> allReads) {
 		Map<String, Contig> contigMap = new HashMap<String, Contig>();
 		for (Contig contig : contigs) {
 			contigMap.put(contig.getDescriptor(), contig);
@@ -372,7 +372,7 @@ public class ReAligner {
 			if (contigRead.getMappingQuality() >= minContigMapq) {
 				List<ReadBlock> contigReadBlocks = ReadBlock.getReadBlocks(contigRead);
 				Contig contig = contigMap.get(contigRead.getReadName());
-				List<ReadPosition> readPositions = contig.getFilteredReadPositions(allowedMismatchesFromContig);
+				List<ReadPosition> readPositions = contig.getFilteredReadPositions(allowedMismatchesFromContig, allReads);
 				
 				for (ReadPosition readPosition : readPositions) {
 					// TODO: Handle multi-mappers (update XH tags?)
@@ -600,11 +600,29 @@ public class ReAligner {
 
 		long s = System.currentTimeMillis();
 		
+
+		String input = "/home/lisle/ayc/sim/sim261/chr17/sorted.bam";
+		String output = "/home/lisle/ayc/sim/sim261/chr17/realigned.bam";
+		String reference = "/home/lisle/reference/chr17/chr17.fa";
+		String regions = "/home/lisle/ayc/regions/chr17_261.gtf";
+		String tempDir = "/home/lisle/ayc/sim/sim261/chr17/working";
+
+		
+/*
+		String input = "/home/lisle/ayc/sim/sim261/chr13/sorted.bam";
+		String output = "/home/lisle/ayc/sim/sim261/chr13/realigned.bam";
+		String reference = "/home/lisle/reference/chr13/chr13.fa";
+		String regions = "/home/lisle/ayc/regions/chr13_261.gtf";
+		String tempDir = "/home/lisle/ayc/sim/sim261/chr13/working";
+*/
+		
+/*		
 		String input = "/home/lisle/ayc/sim/sim261/chr16/sorted.bam";
 		String output = "/home/lisle/ayc/sim/sim261/chr16/realigned.bam";
 		String reference = "/home/lisle/reference/chr16/chr16.fa";
 		String regions = "/home/lisle/ayc/regions/chr16_261.gtf";
 		String tempDir = "/home/lisle/ayc/sim/sim261/chr16/working";
+*/
 		
 /*
 		String input = "/home/lisle/ayc/sim/sim261/sorted.bam";
@@ -623,19 +641,19 @@ public class ReAligner {
 
 
 		AssemblerSettings settings = new AssemblerSettings();
-		settings.setKmerSize(63);
+		settings.setKmerSize(33);
 		settings.setMinContigLength(100);
-		settings.setMinEdgeFrequency(4);
-		settings.setMinNodeFrequncy(4);
+		settings.setMinEdgeFrequency(3);
+		settings.setMinNodeFrequncy(3);
 		settings.setMinEdgeRatio(.02);
 		settings.setMaxPotentialContigs(10000);
-		settings.setMinContigRatio(.3);
-		settings.setMinUniqueReads(2);
+		settings.setMinContigRatio(.5);
+		settings.setMinUniqueReads(1);
 
 		realigner.setAssemblerSettings(settings);
 		
 		realigner.setMinContigMapq(1);
-		realigner.setAllowedMismatchesFromContig(0);
+		realigner.setAllowedMismatchesFromContig(2);
 
 		// reference = "/home/lisle/reference/chr17/chr17.fa";
 		// regionsGtf = "/home/lisle/ayc/regions/chr17.gtf";

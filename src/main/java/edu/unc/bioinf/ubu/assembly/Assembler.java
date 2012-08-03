@@ -59,6 +59,8 @@ public class Assembler {
 	private int potentialContigCount = 0;
 	
 	private long regionLength;
+	
+	List<SAMRecord> allReads = new ArrayList<SAMRecord>();
 		
 	public List<Contig> assembleContigs(String inputSam, String output) throws FileNotFoundException, IOException {
         SAMFileReader reader = new SAMFileReader(new File(inputSam));
@@ -72,6 +74,7 @@ public class Assembler {
 		int numRecs = 0;
 		
 		for (SAMRecord read : reader) {
+			allReads.add(read);
 			addToGraph(read);
 			numRecs++;
 			
@@ -238,6 +241,12 @@ public class Assembler {
 		if ((contig.getSequence().length() >= minContigLength) &&
 			((double) contig.getSequence().length() / (double) regionLength >= minContigRatio)) {
 			contig.setDescriptor(counts.toString());
+			
+			
+			if (counts.isTerminatedAtRepeat()) {
+				contig.setDescriptor(contig.getDescriptor() + "_repeatNode:" + node.getSequence());
+			}
+			
 			contigs.add(contig);
 		}
 	}

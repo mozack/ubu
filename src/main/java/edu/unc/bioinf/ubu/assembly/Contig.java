@@ -73,13 +73,14 @@ public class Contig {
 	 * the location of the read within the contig.  Only those reads that exactly
 	 * match the contig are included. 
 	 */
-	public List<ReadPosition> getFilteredReadPositions(int allowedMismatchesFromContig) {
+	public List<ReadPosition> getFilteredReadPositions(int allowedMismatchesFromContig, List<SAMRecord> allReads) {
 		List<ReadPosition> readPositions = new ArrayList<ReadPosition>();
 		int index = 0;
 		
 		// Loop through each node's starting reads
 		for (Node node : nodes) {
-			for (SAMRecord read : node.getStartingReads()) {
+			//for (SAMRecord read : node.getStartingReads()) {
+			for (SAMRecord read : allReads) {
 				// Does this read match the contig?
 				String readSequence = read.getReadString();
 				
