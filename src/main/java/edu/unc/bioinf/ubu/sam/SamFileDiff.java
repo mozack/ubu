@@ -42,6 +42,7 @@ public class SamFileDiff {
 	private Iterator<List<SAMRecord>> iter2;
 	
 	private boolean isReadIdComparisonOnly;
+	private boolean isReadAndCoordsOnly;
 
 	public void diff(String samInputFileName1, String samInputFileName2, String samOutputFileName1, String samOutputFileName2) {
 		
@@ -102,6 +103,10 @@ public class SamFileDiff {
 		this.isReadIdComparisonOnly = isReadIdComparisonOnly;
 	}
 	
+	public void setReadAndCoordsOnly(boolean isReadAndCoordsOnly) {
+		this.isReadAndCoordsOnly = isReadAndCoordsOnly;
+	}
+
 	private void addAlignments(SAMFileWriter out, List<SAMRecord> reads) {
 		for (SAMRecord read : reads) {
 			out.addAlignment(read);
@@ -176,6 +181,15 @@ public class SamFileDiff {
 		return read;
 	}
 
+	private int compareCoords(SAMRecord read1, SAMRecord read2) {
+		int compare = read1.getReferenceName().compareTo(read2.getReferenceName());
+		
+		if (compare == 0) {
+			compare = read1.getAlignmentStart() - read2.getAlignmentStart();
+		}
+		
+		return compare;
+	}
 	
 	private void diffReadLists(List<SAMRecord> readList1, List<SAMRecord> readList2, SAMFileWriter out1, SAMFileWriter out2) {
 		
@@ -191,7 +205,14 @@ public class SamFileDiff {
         	SAMRecord read1 = getNextRead1(iter1);
         	SAMRecord read2 = getNextRead2(iter2);
         	
-        	int compare = read1.getSAMString().compareTo(read2.getSAMString());
+        	int compare;
+        	
+        	//TODO: One of these is incorrect.  Numerical versus string coordinate comparison?
+        	if (this.isReadAndCoordsOnly) {
+        		compare = compareCoords(read1, read2);
+        	} else {
+        		compare = read1.getSAMString().compareTo(read2.getSAMString());
+        	}
         	
         	if (compare < 0) {
         		// There is an extra read in the first bam file.
@@ -261,6 +282,7 @@ public class SamFileDiff {
 			SamFileDiff diff = new SamFileDiff();
 			
 			diff.setReadIdComparisonOnly(options.isReadIdComparisonOnly());
+			diff.setReadAndCoordsOnly(options.isReadIdAndPositionComparison());
 			
 			diff.diff(options.getInput1File(), options.getInput2File(),
 					options.getOutput1File(), options.getOutput2File());
