@@ -6,8 +6,6 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
-import javax.swing.SortOrder;
-
 import org.apache.commons.lang.StringUtils;
 
 import net.sf.samtools.SAMFileHeader;
@@ -186,6 +184,10 @@ public class SamFileDiff {
 		
 		if (compare == 0) {
 			compare = read1.getAlignmentStart() - read2.getAlignmentStart();
+		}
+		
+		if (compare == 0) {
+			compare = read1.getCigarString().compareTo(read2.getCigarString());
 		}
 		
 		return compare;
