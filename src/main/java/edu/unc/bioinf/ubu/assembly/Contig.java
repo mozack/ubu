@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import edu.unc.bioinf.ubu.assembly.SequenceUtil.MatchResult;
+
 import net.sf.samtools.SAMRecord;
 
 public class Contig {
@@ -88,9 +90,10 @@ public class Contig {
 					String contigSubstring = sequence.substring(index, index+readSequence.length());
 					
 					//if (contigSubstring.equals(readSequence)) {
-					if (SequenceUtil.isMatch(contigSubstring, readSequence, allowedMismatchesFromContig)) {
+					MatchResult matchResult = SequenceUtil.isMatch(contigSubstring, readSequence, allowedMismatchesFromContig);
+					if (matchResult.isMatch()) {
 						// We have a match, record this read's position in the contig
-						readPositions.add(new ReadPosition(read, index));
+						readPositions.add(new ReadPosition(read, index, matchResult.getNumMismatches()));
 					}
 				}
 			}

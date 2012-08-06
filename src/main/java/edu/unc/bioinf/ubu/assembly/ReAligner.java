@@ -366,6 +366,8 @@ public class ReAligner {
 
 		SAMFileReader reader = new SAMFileReader(new File(contigSam));
 		reader.setValidationStringency(ValidationStringency.SILENT);
+		
+		Map<String, List<ReadPosition>> readMap = new HashMap<String, List<ReadPosition>>();
 
 		for (SAMRecord contigRead : reader) {
 
@@ -376,10 +378,34 @@ public class ReAligner {
 				
 				for (ReadPosition readPosition : readPositions) {
 					// TODO: Handle multi-mappers (update XH tags?)
+					
 					SAMRecord updatedRead = updateReadAlignment(contigRead,
 							contigReadBlocks, readPosition);
 					if (updatedRead != null) {
-						updatedReads.add(updatedRead);
+						List<ReadPosition> reads = readMap.get(readPosition.getRead().getReadName());
+						int currentMismatches = Integer.MAX_VALUE;
+						if (reads != null) {
+							currentMismatches = reads.get(0).getNumMismatches();
+						} else {
+							reads = new ArrayList<ReadPosition>();
+						}
+						
+						readPosition.setRead(updatedRead);
+						
+						if (readPosition.getNumMismatches() < currentMismatches) {
+							reads = new ArrayList<ReadPosition>();
+							reads.add(readPosition);
+						} else if (readPosition.getNumMismatches() == currentMismatches) {
+							reads.add(readPosition);
+						}
+						
+						readMap.put(readPosition.getRead().getReadName(), reads);
+					}
+				}
+				
+				for (List<ReadPosition> readList : readMap.values()) {
+					for (ReadPosition readPos : readList) {
+						updatedReads.add(readPos.getRead());
 					}
 				}
 			}
