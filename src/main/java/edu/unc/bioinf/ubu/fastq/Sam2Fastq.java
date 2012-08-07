@@ -56,6 +56,8 @@ public class Sam2Fastq {
         			last2Read = read.getReadName();
         			output2Count += 1;
         		}
+        	} else {
+        		System.out.println("Don't know what to do with unpaired read: " + read.getSAMString());
         	}
         	
             lineCnt++;
