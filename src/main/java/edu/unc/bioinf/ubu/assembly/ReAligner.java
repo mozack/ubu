@@ -21,6 +21,7 @@ import net.sf.samtools.SAMFileWriter;
 import net.sf.samtools.SAMFileWriterFactory;
 import net.sf.samtools.SAMRecord;
 import net.sf.samtools.SAMFileReader.ValidationStringency;
+import edu.unc.bioinf.ubu.fastq.Sam2Fastq;
 import edu.unc.bioinf.ubu.gtf.Feature;
 import edu.unc.bioinf.ubu.gtf.GtfLoader;
 import edu.unc.bioinf.ubu.sam.ReadBlock;
@@ -258,6 +259,8 @@ public class ReAligner {
 		String contigsFasta = tempDir + "/" + region.getDescriptor() + "_contigs.fasta";
 		String contigsSam   = tempDir + "/" + region.getDescriptor() + "_contigs.sam";
 		String outputBam    = tempDir + "/" + region.getDescriptor() + "_output.bam";
+		String targetRegionFastq = tempDir + "/" + region.getDescriptor() + ".fastq";
+		String alignedToContigSam = tempDir + "/" + region.getDescriptor() + "_aligned_to_contig.sam";
 		
 //		log("Initializing assembler");
 		Assembler assem = newAssembler();
@@ -272,7 +275,10 @@ public class ReAligner {
 			aligner.align(contigsFasta, contigsSam);
 			
 //			log("Adjusting reads");
-			adjustReads(contigsSam, contigs, updatedReads, assem.allReads);
+//			adjustReads(contigsSam, contigs, updatedReads, assem.allReads);
+			
+			adjustReads2(contigsSam, updatedReads, assem.allReads,
+					contigsFasta, targetRegionFastq, targetRegionBam, alignedToContigSam);
 			
 //			log("Writing adjusted reads");
 			writeOutputBam(updatedReads, outputBam);
@@ -355,6 +361,63 @@ public class ReAligner {
 		samHeader.setSortOrder(SAMFileHeader.SortOrder.unsorted);
 
 		reader.close();
+	}
+	
+	private void sam2Fastq(String bam, String fastq) throws IOException {
+		Sam2Fastq sam2Fastq = new Sam2Fastq();
+		sam2Fastq.convert(bam, fastq);
+	}
+	
+	private void adjustReads2(String contigSam,
+			Set<SAMRecord> updatedReads, List<SAMRecord> allReads,
+			String contigFasta, String regionFastq, String regionBam, String alignedToContigSam) throws InterruptedException, IOException {
+		
+		// Convert region bam to fastq
+		sam2Fastq(regionBam, regionFastq);
+		
+		// Build contig fasta index
+		Aligner contigAligner = new Aligner(contigFasta);
+		contigAligner.index();
+		
+		// Align region fastq against assembled contigs
+		contigAligner.shortAlign(regionFastq, alignedToContigSam);
+
+		// Place original reads into a map keyed by name
+		Map<String, SAMRecord> origReadMap = new HashMap<String, SAMRecord>();
+		for (SAMRecord origRead : allReads) {
+			origReadMap.put(origRead.getReadName(), origRead);
+		}
+		
+		// Place contig reads into a map keyed by name
+		Map<String, SAMRecord> contigReads = new HashMap<String, SAMRecord>();
+		SAMFileReader contigReader = new SAMFileReader(new File(contigSam));
+		contigReader.setValidationStringency(ValidationStringency.SILENT);
+		
+		for (SAMRecord contigRead : contigReader) {
+			contigReads.put(contigRead.getReadName(), contigRead);
+		}
+		contigReader.close();
+		
+		// Iterate over contig-aligned reads and adjust alignments back to reference
+		SAMFileReader reader = new SAMFileReader(new File(contigSam));
+		reader.setValidationStringency(ValidationStringency.SILENT);
+		
+		for (SAMRecord read : reader) {
+			
+			//TODO: Check for mismatches.  Smarter CIGAR check.
+			if (read.getCigarString().equals("100M")) {
+			
+				SAMRecord origRead = origReadMap.get(read.getReadName());
+				SAMRecord contigRead = contigReads.get(read.getReferenceName());
+				List<ReadBlock> contigReadBlocks = ReadBlock.getReadBlocks(contigRead);
+				
+				ReadPosition readPosition = new ReadPosition(origRead, read.getAlignmentStart(), -1);
+				SAMRecord updatedRead = updateReadAlignment(contigRead,
+						contigReadBlocks, readPosition);
+				
+				updatedReads.add(updatedRead);
+			}
+		}
 	}
 
 	private void adjustReads(String contigSam, List<Contig> contigs,
