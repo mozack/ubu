@@ -20,6 +20,7 @@ public class Sam2Fastq {
 	private FastqOutputFile output2;
 	private ReverseComplementor reverseComplementor = new ReverseComplementor();
 	private boolean shouldIdentifyEndByReadId = false;
+	private boolean isMapspliceFusions = false;
 	private String end1Suffix;
 	private String end2Suffix;
 
@@ -107,7 +108,33 @@ public class Sam2Fastq {
 		String bases = read.getReadString();
 		String qualities = read.getBaseQualityString();
 		
-		if (read.getReadNegativeStrandFlag()) {
+		if ((isMapspliceFusions) && (isFusion(read))) {
+			String fusionAttribute = (String) read.getAttribute("ZF");
+			int parenIdx = fusionAttribute.indexOf('(');
+			boolean isDonerNegative = fusionAttribute.indexOf(parenIdx+1) == '-';
+			boolean isAccepterNegative = fusionAttribute.indexOf(parenIdx+2) == '-';
+			
+			int donerLength = read.getCigar().getCigarElement(0).getLength();
+			int accepterLength = read.getCigar().getCigarElement(1).getLength();
+			
+			if (donerLength + accepterLength != read.getReadLength()) {
+				throw new IllegalArgumentException ("Invalid fusion Cigar for read: " + read.getReadName());
+			}
+			
+			String donerBases = read.getReadString().substring(0, donerLength);
+			String accepterBases = read.getReadString().substring(donerLength, read.getReadLength());
+			
+			if (isDonerNegative) {
+				donerBases = reverseComplementor.reverseComplement(donerBases);
+			}
+			
+			if (isAccepterNegative) {
+				accepterBases = reverseComplementor.reverseComplement(accepterBases);
+			}
+			
+			bases = donerBases + accepterBases;
+		}
+		else if (read.getReadNegativeStrandFlag()) {
 			bases = reverseComplementor.reverseComplement(bases);
 			qualities = reverseComplementor.reverse(qualities);
 		}
@@ -115,6 +142,10 @@ public class Sam2Fastq {
 		FastqRecord fastq = new FastqRecord("@" + read.getReadName(), bases, qualities);
 		
 		return fastq;
+	}
+	
+	private boolean isFusion(SAMRecord read) {
+		return read.getAttribute("ZF") != null;
 	}
 	
 	private boolean isFirstInPair(SAMRecord read) {
@@ -149,6 +180,10 @@ public class Sam2Fastq {
 		this.end2Suffix = end2Suffix;
 	}
 	
+	public void setMapspliceFusions(boolean isMapspliceFusions) {
+		this.isMapspliceFusions = isMapspliceFusions;
+	}
+
 	public static void run(String[] args) throws IOException {
 		Sam2FastqOptions options = new Sam2FastqOptions();
 		options.parseOptions(args);
@@ -163,6 +198,8 @@ public class Sam2Fastq {
 				if (options.shouldIdEndByReadName()) {
 					sam2Fastq.setEndSuffixes(options.getEnd1Suffix(), options.getEnd2Suffix());
 				}
+				
+				sam2Fastq.setMapspliceFusions(options.isMapspliceFusions());
 				
 				sam2Fastq.convert(options.getInputFile(), options.getFastq1(), options.getFastq2());
 			} else {
