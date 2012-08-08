@@ -5,6 +5,8 @@ import java.io.IOException;
 
 import edu.unc.bioinf.ubu.sam.ReverseComplementor;
 
+import net.sf.samtools.CigarElement;
+import net.sf.samtools.CigarOperator;
 import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMRecord;
 import net.sf.samtools.SAMFileReader.ValidationStringency;
@@ -114,11 +116,21 @@ public class Sam2Fastq {
 			boolean isDonerNegative = fusionAttribute.indexOf(parenIdx+1) == '-';
 			boolean isAccepterNegative = fusionAttribute.indexOf(parenIdx+2) == '-';
 			
-			int donerLength = read.getCigar().getCigarElement(0).getLength();
-			int accepterLength = read.getCigar().getCigarElement(1).getLength();
+			int donerLength = 0;
+			int accepterLength = 0;
 			
-			if (donerLength + accepterLength != read.getReadLength()) {
-				throw new IllegalArgumentException ("Invalid fusion Cigar for read: " + read.getReadName());
+			CigarElement firstElement = read.getCigar().getCigarElement(0);
+			CigarElement lastElement  = read.getCigar().getCigarElement(read.getCigar().getCigarElements().size()-1);
+			
+			if (firstElement.getOperator() == CigarOperator.S) {
+				donerLength = firstElement.getLength();
+				accepterLength = read.getReadLength() - donerLength;
+			} else if (lastElement.getOperator() == CigarOperator.S) {
+				accepterLength = lastElement.getLength();
+				donerLength = read.getReadLength() - accepterLength;
+			} else {
+				throw new IllegalArgumentException (
+						"Expected soft clip at begin or end of Cigar for fusion read: " + read.getReadName());
 			}
 			
 			String donerBases = read.getReadString().substring(0, donerLength);
