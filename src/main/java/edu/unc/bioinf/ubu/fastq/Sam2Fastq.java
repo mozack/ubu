@@ -113,8 +113,11 @@ public class Sam2Fastq {
 		if ((isMapspliceFusions) && (isFusion(read))) {
 			String fusionAttribute = (String) read.getAttribute("ZF");
 			int parenIdx = fusionAttribute.indexOf('(');
-			boolean isDonerNegative = fusionAttribute.indexOf(parenIdx+1) == '-';
-			boolean isAccepterNegative = fusionAttribute.indexOf(parenIdx+2) == '-';
+			if ((parenIdx < 0) || (parenIdx+2 >= fusionAttribute.length())) {
+				throw new IllegalArgumentException("Invalid fusion attribute for read: [" + read.getSAMString() + "]");
+			}
+			boolean isDonerNegative = fusionAttribute.charAt(parenIdx+1) == '-';
+			boolean isAccepterNegative = fusionAttribute.charAt(parenIdx+2) == '-';
 			
 			int donerLength = 0;
 			int accepterLength = 0;
@@ -130,7 +133,7 @@ public class Sam2Fastq {
 				donerLength = read.getReadLength() - accepterLength;
 			} else {
 				throw new IllegalArgumentException (
-						"Expected soft clip at begin or end of Cigar for fusion read: " + read.getReadName());
+						"Expected soft clip at begin or end of Cigar for fusion read: [" + read.getSAMString() + "]");
 			}
 			
 			String donerBases = read.getReadString().substring(0, donerLength);
@@ -221,5 +224,11 @@ public class Sam2Fastq {
 			long e = System.currentTimeMillis();
 			System.out.println("sam2fastq done.  Elapsed secs: " + (e-s)/1000);
 		}
+	}
+	
+	public static void main(String[] args) throws Exception {
+		String argz = "--end1 /1 --end2 /2 --in /home/lisle/sam2fastq/round2/test2.sam  --fastq1 /home/lisle/sam2fastq/round2/1.fastq --fastq2 /home/lisle/sam2fastq/round2/2.fastq --mapsplice";
+		
+		run(argz.split(" "));
 	}
 }
