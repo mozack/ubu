@@ -399,7 +399,7 @@ public class ReAligner {
 		contigReader.close();
 		
 		// Iterate over contig-aligned reads and adjust alignments back to reference
-		SAMFileReader reader = new SAMFileReader(new File(contigSam));
+		SAMFileReader reader = new SAMFileReader(new File(alignedToContigSam));
 		reader.setValidationStringency(ValidationStringency.SILENT);
 		
 		for (SAMRecord read : reader) {
@@ -411,11 +411,13 @@ public class ReAligner {
 				SAMRecord contigRead = contigReads.get(read.getReferenceName());
 				List<ReadBlock> contigReadBlocks = ReadBlock.getReadBlocks(contigRead);
 				
-				ReadPosition readPosition = new ReadPosition(origRead, read.getAlignmentStart(), -1);
+				ReadPosition readPosition = new ReadPosition(origRead, read.getAlignmentStart()-1, -1);
 				SAMRecord updatedRead = updateReadAlignment(contigRead,
 						contigReadBlocks, readPosition);
 				
-				updatedReads.add(updatedRead);
+				if (updatedRead != null) {
+					updatedReads.add(updatedRead);
+				}
 			}
 		}
 	}
@@ -691,6 +693,7 @@ public class ReAligner {
 		
 
 		String input = "/home/lisle/ayc/sim/sim261/chr17/sorted.bam";
+//		String input = "/home/lisle/ayc/sim/sim261/chr17/small_sorted.bam";
 		String output = "/home/lisle/ayc/sim/sim261/chr17/realigned.bam";
 		String reference = "/home/lisle/reference/chr17/chr17.fa";
 		String regions = "/home/lisle/ayc/regions/chr17_261.gtf";
