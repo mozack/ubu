@@ -161,6 +161,9 @@ public class ReAligner {
 
 		log("Initializing output SAM File");
 		initOutputFile(outputSam);
+		
+		log("Caching unaligned reads");
+		getUnalignedReads(inputSam);
 
 		log("Iterating over regions");
 		for (Feature region : regions) {
@@ -248,6 +251,66 @@ public class ReAligner {
 		
 		return aligner;
 	}
+	
+	//TODO: Factor out, and use where appropriate
+	private void runCommand(String cmd) throws IOException, InterruptedException {
+		
+		//String cmd = "bwa bwasw -f " + outputSam + " " + reference + " " + input;
+		System.out.println("Running: [" + cmd + "]");
+		
+		long s = System.currentTimeMillis();
+		
+		Process proc = Runtime.getRuntime().exec(cmd);
+		
+		//TODO: Catch InterruptedException ?
+		//TODO: Capture stderr
+		int ret = proc.waitFor();
+		
+		long e = System.currentTimeMillis();
+		
+		System.out.println("cmd time: " + (e-s)/1000 + " seconds.");
+		
+		if (ret != 0) {
+			throw new RuntimeException("cmd exited with non-zero return code : [" + ret + "] for command: [" + cmd + "]");
+		}
+	}
+
+	private void runCommand(String[] cmd) throws IOException, InterruptedException {
+		
+		//String cmd = "bwa bwasw -f " + outputSam + " " + reference + " " + input;
+		System.out.println("Running: [" + cmd + "]");
+		
+		long s = System.currentTimeMillis();
+		
+		Process proc = Runtime.getRuntime().exec(cmd);
+		
+		//TODO: Catch InterruptedException ?
+		//TODO: Capture stderr
+		int ret = proc.waitFor();
+		
+		long e = System.currentTimeMillis();
+		
+		System.out.println("cmd time: " + (e-s)/1000 + " seconds.");
+		
+		if (ret != 0) {
+			throw new RuntimeException("cmd exited with non-zero return code : [" + ret + "] for command: [" + cmd + "]");
+		}
+	}
+
+	
+	private void getUnalignedReads(String inputSam) throws InterruptedException, IOException {
+		String unalignedBam = tempDir + "/unaligned.bam";
+		String unalignedFastq = getUnalignedFastqFile();
+		
+		String cmd = "samtools view -b -f 0x04 " + inputSam + " -o " + unalignedBam;
+		runCommand(cmd);
+		
+		sam2Fastq(unalignedBam, unalignedFastq);
+	}
+	
+	private String getUnalignedFastqFile() {
+		return tempDir + "/unaligned.fastq";
+	}
 
 	public void processRegion(Feature region, String inputSam) throws InterruptedException, IOException {
 		
@@ -261,6 +324,7 @@ public class ReAligner {
 		String outputBam    = tempDir + "/" + region.getDescriptor() + "_output.bam";
 		String targetRegionFastq = tempDir + "/" + region.getDescriptor() + ".fastq";
 		String alignedToContigSam = tempDir + "/" + region.getDescriptor() + "_aligned_to_contig.sam";
+		String unalignedFastq = getUnalignedFastqFile();
 		
 //		log("Initializing assembler");
 		Assembler assem = newAssembler();
@@ -368,12 +432,21 @@ public class ReAligner {
 		sam2Fastq.convert(bam, fastq);
 	}
 	
+	private void appendFile(String file1, String file2) throws InterruptedException, IOException {
+		String[] cmd = new String[] { "bash", "-c", "cat " + file1 + " >> " + file2 };
+		runCommand(cmd);
+	}
+	
 	private void adjustReads2(String contigSam,
 			Set<SAMRecord> updatedReads, List<SAMRecord> allReads,
-			String contigFasta, String regionFastq, String regionBam, String alignedToContigSam) throws InterruptedException, IOException {
+			String contigFasta, String regionFastq, String regionBam, 
+			String alignedToContigSam) throws InterruptedException, IOException {
 		
 		// Convert region bam to fastq
 		sam2Fastq(regionBam, regionFastq);
+		
+		// Append unaligned reads to the region fastq
+		appendFile(getUnalignedFastqFile(), regionFastq);
 		
 		// Build contig fasta index
 		Aligner contigAligner = new Aligner(contigFasta);
