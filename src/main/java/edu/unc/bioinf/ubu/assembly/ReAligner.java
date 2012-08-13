@@ -312,42 +312,48 @@ public class ReAligner {
 		return tempDir + "/unaligned.fastq";
 	}
 
-	public void processRegion(Feature region, String inputSam) throws InterruptedException, IOException {
+	public void processRegion(Feature region, String inputSam) throws Exception {
 		
-		Set<SAMRecord> updatedReads = new HashSet<SAMRecord>();
+		try {
 		
-//		log("Extracting targeted region: " + region.getDescriptor());
-		String targetRegionBam = extractTargetRegion(inputSam, region);
-		
-		String contigsFasta = tempDir + "/" + region.getDescriptor() + "_contigs.fasta";
-		String contigsSam   = tempDir + "/" + region.getDescriptor() + "_contigs.sam";
-		String outputBam    = tempDir + "/" + region.getDescriptor() + "_output.bam";
-		String targetRegionFastq = tempDir + "/" + region.getDescriptor() + ".fastq";
-		String alignedToContigSam = tempDir + "/" + region.getDescriptor() + "_aligned_to_contig.sam";
-		String unalignedFastq = getUnalignedFastqFile();
-		
-//		log("Initializing assembler");
-		Assembler assem = newAssembler();
-		
-		Aligner aligner = buildAligner(region);
-		
-//		log("Assembling contigs");
-		List<Contig> contigs = assem.assembleContigs(targetRegionBam, contigsFasta);
-		
-		if (contigs.size() > 0) {
-//			log("Aligning contigs");
-			aligner.align(contigsFasta, contigsSam);
+			Set<SAMRecord> updatedReads = new HashSet<SAMRecord>();
 			
-//			log("Adjusting reads");
-//			adjustReads(contigsSam, contigs, updatedReads, assem.allReads);
+	//		log("Extracting targeted region: " + region.getDescriptor());
+			String targetRegionBam = extractTargetRegion(inputSam, region);
 			
-			adjustReads2(contigsSam, updatedReads, assem.allReads,
-					contigsFasta, targetRegionFastq, targetRegionBam, alignedToContigSam);
+			String contigsFasta = tempDir + "/" + region.getDescriptor() + "_contigs.fasta";
+			String contigsSam   = tempDir + "/" + region.getDescriptor() + "_contigs.sam";
+			String outputBam    = tempDir + "/" + region.getDescriptor() + "_output.bam";
+			String targetRegionFastq = tempDir + "/" + region.getDescriptor() + ".fastq";
+			String alignedToContigSam = tempDir + "/" + region.getDescriptor() + "_aligned_to_contig.sam";
+			String unalignedFastq = getUnalignedFastqFile();
 			
-//			log("Writing adjusted reads");
-			writeOutputBam(updatedReads, outputBam);
-		} else {
-			log ("No contigs assembled for region: " + region.getDescriptor());
+	//		log("Initializing assembler");
+			Assembler assem = newAssembler();
+			
+			Aligner aligner = buildAligner(region);
+			
+	//		log("Assembling contigs");
+			List<Contig> contigs = assem.assembleContigs(targetRegionBam, contigsFasta);
+			
+			if (contigs.size() > 0) {
+	//			log("Aligning contigs");
+				aligner.align(contigsFasta, contigsSam);
+				
+	//			log("Adjusting reads");
+	//			adjustReads(contigsSam, contigs, updatedReads, assem.allReads);
+				
+				adjustReads2(contigsSam, updatedReads, assem.allReads,
+						contigsFasta, targetRegionFastq, targetRegionBam, alignedToContigSam);
+				
+	//			log("Writing adjusted reads");
+				writeOutputBam(updatedReads, outputBam);
+			} else {
+				log ("No contigs assembled for region: " + region.getDescriptor());
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw e;
 		}
 	}
 
