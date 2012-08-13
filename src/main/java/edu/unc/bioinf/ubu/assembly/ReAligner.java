@@ -312,7 +312,7 @@ public class ReAligner {
 		return tempDir + "/unaligned.fastq";
 	}
 
-	public void processRegion(Feature region, String inputSam) throws InterruptedException, IOException {
+	public void processRegion(Feature region, String inputSam) throws Exception {
 		
 		Set<SAMRecord> updatedReads = new HashSet<SAMRecord>();
 		

@@ -22,10 +22,7 @@ public class ReAlignerRunnable implements Runnable {
 		
 		try {
 			reAligner.processRegion(region, inputSam);
-		} catch (IOException e) {
-			e.printStackTrace();
-			throw new RuntimeException(e);
-		} catch (InterruptedException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 			throw new RuntimeException(e);
 		} finally {
