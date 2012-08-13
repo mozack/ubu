@@ -64,6 +64,8 @@ public class ReAligner {
 	private int allowedMismatchesFromContig = 0;
 	
 	private List<ReAlignerRunnable> threads = new ArrayList<ReAlignerRunnable>();
+	
+	private List<SAMRecord> unalignedReads = new ArrayList<SAMRecord>();
 
 	/*
 	public void reAlign(String inputSam, String outputSam) throws Exception {
@@ -296,7 +298,6 @@ public class ReAligner {
 			throw new RuntimeException("cmd exited with non-zero return code : [" + ret + "] for command: [" + cmd + "]");
 		}
 	}
-
 	
 	private void getUnalignedReads(String inputSam) throws InterruptedException, IOException {
 		String unalignedBam = tempDir + "/unaligned.bam";
@@ -306,6 +307,15 @@ public class ReAligner {
 		runCommand(cmd);
 		
 		sam2Fastq(unalignedBam, unalignedFastq);
+		
+		SAMFileReader reader = new SAMFileReader(new File(unalignedBam));
+		reader.setValidationStringency(ValidationStringency.SILENT);
+		
+		for (SAMRecord read : reader) {
+			if (read.getReadUnmappedFlag()) {
+				unalignedReads.add(read);
+			}
+		}
 	}
 	
 	private String getUnalignedFastqFile() {
@@ -465,6 +475,11 @@ public class ReAligner {
 		Map<String, SAMRecord> origReadMap = new HashMap<String, SAMRecord>();
 		for (SAMRecord origRead : allReads) {
 			origReadMap.put(origRead.getReadName(), origRead);
+		}
+		
+		// Add unaligned reads to origReadMap
+		for (SAMRecord unalignedRead : unalignedReads) {
+			origReadMap.put(unalignedRead.getReadName(), unalignedRead);
 		}
 		
 		// Place contig reads into a map keyed by name
