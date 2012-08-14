@@ -316,6 +316,7 @@ public class ReAligner {
 				unalignedReads.add(read);
 			}
 		}
+		reader.close();
 	}
 	
 	private String getUnalignedFastqFile() {
@@ -514,6 +515,8 @@ public class ReAligner {
 				}
 			}
 		}
+		
+		reader.close();
 	}
 
 	private void adjustReads(String contigSam, List<Contig> contigs,

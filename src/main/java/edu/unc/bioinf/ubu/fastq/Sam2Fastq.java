@@ -71,6 +71,7 @@ public class Sam2Fastq {
                 
         output1.close();
         output2.close();
+        reader.close();
         
         if (output1Count != output2Count) {
         	throw new IllegalStateException("Non-symmetrical read counts found for " + inputSam + ".  Your reads may not be paired properly.");
@@ -104,6 +105,7 @@ public class Sam2Fastq {
         }
                 
         output1.close();
+        reader.close();
 	}
 	
 	private FastqRecord samReadToFastqRecord(SAMRecord read) {
