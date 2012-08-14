@@ -105,8 +105,10 @@ public class Assembler {
 			outputContigs();
 		} catch (DepthExceededException e) {
 			System.out.println("DEPTH EXCEEDED for : " + inputSam);
+			contigs.clear();
 		} catch (TooManyPotentialContigsException e) {
 			System.out.println("TOO MANY CONTIGS for : " + inputSam);
+			contigs.clear();
 		}
 		
 		writer.close();
