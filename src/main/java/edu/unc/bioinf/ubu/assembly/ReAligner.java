@@ -519,61 +519,6 @@ public class ReAligner {
 		reader.close();
 	}
 
-	private void adjustReads(String contigSam, List<Contig> contigs,
-			Set<SAMRecord> updatedReads, List<SAMRecord> allReads) {
-		Map<String, Contig> contigMap = new HashMap<String, Contig>();
-		for (Contig contig : contigs) {
-			contigMap.put(contig.getDescriptor(), contig);
-		}
-
-		SAMFileReader reader = new SAMFileReader(new File(contigSam));
-		reader.setValidationStringency(ValidationStringency.SILENT);
-		
-		Map<String, List<ReadPosition>> readMap = new HashMap<String, List<ReadPosition>>();
-
-		for (SAMRecord contigRead : reader) {
-
-			if (contigRead.getMappingQuality() >= minContigMapq) {
-				List<ReadBlock> contigReadBlocks = ReadBlock.getReadBlocks(contigRead);
-				Contig contig = contigMap.get(contigRead.getReadName());
-				List<ReadPosition> readPositions = contig.getFilteredReadPositions(allowedMismatchesFromContig, allReads);
-				
-				for (ReadPosition readPosition : readPositions) {
-					// TODO: Handle multi-mappers (update XH tags?)
-					
-					SAMRecord updatedRead = updateReadAlignment(contigRead,
-							contigReadBlocks, readPosition);
-					if (updatedRead != null) {
-						List<ReadPosition> reads = readMap.get(readPosition.getRead().getReadName());
-						int currentMismatches = Integer.MAX_VALUE;
-						if (reads != null) {
-							currentMismatches = reads.get(0).getNumMismatches();
-						} else {
-							reads = new ArrayList<ReadPosition>();
-						}
-						
-						readPosition.setRead(updatedRead);
-						
-						if (readPosition.getNumMismatches() < currentMismatches) {
-							reads = new ArrayList<ReadPosition>();
-							reads.add(readPosition);
-						} else if (readPosition.getNumMismatches() == currentMismatches) {
-							reads.add(readPosition);
-						}
-						
-						readMap.put(readPosition.getRead().getReadName(), reads);
-					}
-				}
-				
-				for (List<ReadPosition> readList : readMap.values()) {
-					for (ReadPosition readPos : readList) {
-						updatedReads.add(readPos.getRead());
-					}
-				}
-			}
-		}
-	}
-
 	SAMRecord updateReadAlignment(SAMRecord contigRead,
 			List<ReadBlock> contigReadBlocks, ReadPosition orig) {
 		List<ReadBlock> blocks = new ArrayList<ReadBlock>();
