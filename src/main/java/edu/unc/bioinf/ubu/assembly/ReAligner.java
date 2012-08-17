@@ -472,12 +472,15 @@ public class ReAligner {
 		contigReader.setValidationStringency(ValidationStringency.SILENT);
 		
 		for (SAMRecord contigRead : contigReader) {
-			removeSoftClips(contigRead);
-			contigReads.put(contigRead.getReadName(), contigRead);
-			
-			writer.append(">" + contigRead.getReadName() + "\n");
-			writer.append(contigRead.getReadString());
-			writer.append("\n");
+			//TODO: Does this guarantee no alternate alignments?
+			if (contigRead.getMappingQuality() > 1) {
+				removeSoftClips(contigRead);
+				contigReads.put(contigRead.getReadName(), contigRead);
+				
+				writer.append(">" + contigRead.getReadName() + "\n");
+				writer.append(contigRead.getReadString());
+				writer.append("\n");
+			}
 		}
 		contigReader.close();
 		
@@ -809,12 +812,13 @@ public class ReAligner {
 
 		long s = System.currentTimeMillis();
 
+/*
 		String input = "/home/lisle/ayc/sim/sim261/chr1/sorted.bam";
 		String output = "/home/lisle/ayc/sim/sim261/chr1/realigned.bam";
 		String reference = "/home/lisle/reference/chr1/chr1.fa";
 		String regions = "/home/lisle/ayc/regions/chr1_261.gtf";
 		String tempDir = "/home/lisle/ayc/sim/sim261/chr1/working";
-
+*/
 		
 /*
 		String input = "/home/lisle/ayc/sim/sim261/chr17/sorted.bam";
@@ -825,13 +829,12 @@ public class ReAligner {
 		String tempDir = "/home/lisle/ayc/sim/sim261/chr17/working";
 */
 		
-/*
+
 		String input = "/home/lisle/ayc/sim/sim261/chr13/sorted.bam";
 		String output = "/home/lisle/ayc/sim/sim261/chr13/realigned.bam";
 		String reference = "/home/lisle/reference/chr13/chr13.fa";
 		String regions = "/home/lisle/ayc/regions/chr13_261.gtf";
 		String tempDir = "/home/lisle/ayc/sim/sim261/chr13/working";
-*/
 		
 /*		
 		String input = "/home/lisle/ayc/sim/sim261/chr16/sorted.bam";
