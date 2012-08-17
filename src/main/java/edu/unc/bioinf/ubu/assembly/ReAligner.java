@@ -1,7 +1,9 @@
 package edu.unc.bioinf.ubu.assembly;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -14,6 +16,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import net.sf.samtools.Cigar;
+import net.sf.samtools.CigarElement;
 import net.sf.samtools.CigarOperator;
 import net.sf.samtools.SAMFileHeader;
 import net.sf.samtools.SAMFileReader;
@@ -333,6 +337,7 @@ public class ReAligner {
 			String targetRegionBam = extractTargetRegion(inputSam, region);
 			
 			String contigsFasta = tempDir + "/" + region.getDescriptor() + "_contigs.fasta";
+			String cleanContigsFasta = tempDir + "/" + region.getDescriptor() + "_clean_contigs.fasta";
 			String contigsSam   = tempDir + "/" + region.getDescriptor() + "_contigs.sam";
 			String outputBam    = tempDir + "/" + region.getDescriptor() + "_output.bam";
 			String targetRegionFastq = tempDir + "/" + region.getDescriptor() + ".fastq";
@@ -351,11 +356,13 @@ public class ReAligner {
 	//			log("Aligning contigs");
 				aligner.align(contigsFasta, contigsSam);
 				
+				Map<String, SAMRecord> contigReads = loadCleanAndOutputContigs(contigsSam, cleanContigsFasta);
+				
 	//			log("Adjusting reads");
 	//			adjustReads(contigsSam, contigs, updatedReads, assem.allReads);
 				
 				adjustReads2(contigsSam, updatedReads, assem.allReads,
-						contigsFasta, targetRegionFastq, targetRegionBam, alignedToContigSam);
+						cleanContigsFasta, targetRegionFastq, targetRegionBam, alignedToContigSam, contigReads);
 				
 	//			log("Writing adjusted reads");
 				writeOutputBam(updatedReads, outputBam);
@@ -454,10 +461,75 @@ public class ReAligner {
 		runCommand(cmd);
 	}
 	
+	//TODO: Revisit minimum contig length
+	private Map<String, SAMRecord> loadCleanAndOutputContigs(String contigsSam, String cleanContigsFasta) throws IOException {
+		
+		BufferedWriter writer = new BufferedWriter(new FileWriter(cleanContigsFasta, false));
+		
+		// Place contig reads into a map keyed by name and remove soft clips
+		Map<String, SAMRecord> contigReads = new HashMap<String, SAMRecord>();
+		SAMFileReader contigReader = new SAMFileReader(new File(contigsSam));
+		contigReader.setValidationStringency(ValidationStringency.SILENT);
+		
+		for (SAMRecord contigRead : contigReader) {
+			removeSoftClips(contigRead);
+			contigReads.put(contigRead.getReadName(), contigRead);
+			
+			writer.append(">" + contigRead.getReadName() + "\n");
+			writer.append(contigRead.getReadString());
+			writer.append("\n");
+		}
+		contigReader.close();
+		
+		writer.close();
+		
+		return contigReads;
+	}
+	
+	// Assumes entirely soft clipped reads are filtered prior to here.
+	// Checks only the first and last Cigar element
+	// Does not adjust qualities
+	private void removeSoftClips(SAMRecord read) {
+		
+		Cigar cigar = read.getCigar();
+		
+		CigarElement firstElement = cigar.getCigarElement(0);
+		CigarElement lastElement  = cigar.getCigarElement(cigar.numCigarElements()-1);
+		
+		if ((firstElement.getOperator() == CigarOperator.S) ||
+			(lastElement.getOperator() == CigarOperator.S)) {
+		
+			Cigar newCigar = new Cigar();
+			
+			String bases = read.getReadString();
+			//String qualities = read.getBaseQualityString();
+					
+			if (firstElement.getOperator() == CigarOperator.S) {
+				bases = bases.substring(firstElement.getLength(), bases.length()-1);
+				//qualities = qualities.substring(firstElement.getLength(), qualities.length()-1);
+			} else {
+				newCigar.add(firstElement);
+			}
+			
+			for (int i=1; i<cigar.numCigarElements()-1; i++) {
+				newCigar.add(cigar.getCigarElement(i));
+			}
+			
+			if (lastElement.getOperator() == CigarOperator.S) {
+				bases = bases.substring(0, bases.length() - lastElement.getLength() - 1);
+				//qualities = qualities.substring(0, qualities.length() - lastElement.getLength() - 1);
+			}
+			
+			read.setCigar(newCigar);
+			read.setReadString(bases);
+			//read.setBaseQualityString(qualities);
+		}
+	}
+	
 	private void adjustReads2(String contigSam,
 			Set<SAMRecord> updatedReads, List<SAMRecord> allReads,
 			String contigFasta, String regionFastq, String regionBam, 
-			String alignedToContigSam) throws InterruptedException, IOException {
+			String alignedToContigSam, Map<String, SAMRecord> contigReads) throws InterruptedException, IOException {
 		
 		// Convert region bam to fastq
 		sam2Fastq(regionBam, regionFastq);
@@ -483,15 +555,16 @@ public class ReAligner {
 			origReadMap.put(unalignedRead.getReadName(), unalignedRead);
 		}
 		
-		// Place contig reads into a map keyed by name
-		Map<String, SAMRecord> contigReads = new HashMap<String, SAMRecord>();
-		SAMFileReader contigReader = new SAMFileReader(new File(contigSam));
-		contigReader.setValidationStringency(ValidationStringency.SILENT);
-		
-		for (SAMRecord contigRead : contigReader) {
-			contigReads.put(contigRead.getReadName(), contigRead);
-		}
-		contigReader.close();
+		// Place contig reads into a map keyed by name and remove soft clips
+//		Map<String, SAMRecord> contigReads = new HashMap<String, SAMRecord>();
+//		SAMFileReader contigReader = new SAMFileReader(new File(contigSam));
+//		contigReader.setValidationStringency(ValidationStringency.SILENT);
+//		
+//		for (SAMRecord contigRead : contigReader) {
+//			removeSoftClips(contigRead);
+//			contigReads.put(contigRead.getReadName(), contigRead);
+//		}
+//		contigReader.close();
 		
 		// Iterate over contig-aligned reads and adjust alignments back to reference
 		SAMFileReader reader = new SAMFileReader(new File(alignedToContigSam));
