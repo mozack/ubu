@@ -32,17 +32,6 @@ import edu.unc.bioinf.ubu.sam.ReadBlock;
 
 public class ReAligner {
 
-//	private Assembler assembler;
-
-//	private Aligner aligner;
-
-	// private Aligner aligner = new
-	// Aligner("/home/lisle/reference/chr5/chr5.fa");
-	// private Aligner aligner = new
-	// Aligner("/home/lisle/reference/chrX/chrX.fa");
-
-	// private Set<SAMRecord> updatedReads = new HashSet<SAMRecord>();
-
 	private SAMFileHeader samHeader;
 
 	private SAMFileWriter outputReadsBam;
@@ -70,75 +59,6 @@ public class ReAligner {
 	private List<ReAlignerRunnable> threads = new ArrayList<ReAlignerRunnable>();
 	
 	private List<SAMRecord> unalignedReads = new ArrayList<SAMRecord>();
-
-	/*
-	public void reAlign(String inputSam, String outputSam) throws Exception {
-
-		System.out.println("input: " + inputSam);
-		System.out.println("output: " + outputSam);
-		System.out.println("regions: " + regionsGtf);
-		System.out.println("reference: " + reference);
-		System.out.println("working dir: " + tempDir);
-		System.out.println(assemblerSettings.getDescription());
-
-		startMillis = System.currentTimeMillis();
-
-		// String contigsFasta = outputPrefix + "_contigs.fasta";
-		// String contigsSam = outputPrefix + "_contigs.sam";
-
-		init();
-
-		log("Loading target regions");
-		loadRegions();
-
-		log("Reading Input SAM Header");
-		getSamHeader(inputSam);
-
-		log("Initializing output SAM File");
-		initOutputFile(outputSam);
-
-		for (Feature region : regions) {
-
-			Set<SAMRecord> updatedReads = new HashSet<SAMRecord>();
-
-			log("Extracting targeted region: " + region.getDescriptor());
-			String targetRegionBam = extractTargetRegion(inputSam, region);
-
-			String contigsFasta = tempDir + "/" + region.getDescriptor()
-					+ "_contigs.fasta";
-			String contigsSam = tempDir + "/" + region.getDescriptor()
-					+ "_contigs.sam";
-
-			log("Initializing assembler");
-			initAssembler();
-
-			log("Assembling contigs");
-			List<Contig> contigs = assembler.assembleContigs(targetRegionBam,
-					contigsFasta);
-
-			if (contigs.size() > 0) {
-				log("Aligning contigs");
-				aligner.align(contigsFasta, contigsSam);
-
-				log("Adjusting reads");
-				adjustReads(contigsSam, contigs, updatedReads);
-
-				log("Writing adjusted reads");
-//				outputReads(updatedReads, outputSam);
-			} else {
-				log("No contigs assembled for region: "
-						+ region.getDescriptor());
-			}
-
-			// updatedReads.clear();
-		}
-
-		log("Closing output BAM");
-		outputReadsBam.close();
-
-		System.out.println("Done.");
-	}
-	*/
 	
 	public void reAlign(String inputSam, String outputSam) throws Exception {
 
@@ -153,9 +73,6 @@ public class ReAligner {
 		System.out.println(assemblerSettings.getDescription());
 
 		startMillis = System.currentTimeMillis();
-
-		// String contigsFasta = outputPrefix + "_contigs.fasta";
-		// String contigsSam = outputPrefix + "_contigs.sam";
 
 		init();
 
@@ -359,9 +276,7 @@ public class ReAligner {
 				Map<String, SAMRecord> contigReads = loadCleanAndOutputContigs(contigsSam, cleanContigsFasta);
 				
 	//			log("Adjusting reads");
-	//			adjustReads(contigsSam, contigs, updatedReads, assem.allReads);
-				
-				adjustReads2(contigsSam, updatedReads, assem.allReads,
+				adjustReads(contigsSam, updatedReads, assem.allReads,
 						cleanContigsFasta, targetRegionFastq, targetRegionBam, alignedToContigSam, contigReads);
 				
 	//			log("Writing adjusted reads");
@@ -529,7 +444,7 @@ public class ReAligner {
 		}
 	}
 	
-	private void adjustReads2(String contigSam,
+	private void adjustReads(String contigSam,
 			Set<SAMRecord> updatedReads, List<SAMRecord> allReads,
 			String contigFasta, String regionFastq, String regionBam, 
 			String alignedToContigSam, Map<String, SAMRecord> contigReads) throws InterruptedException, IOException {
@@ -557,17 +472,6 @@ public class ReAligner {
 		for (SAMRecord unalignedRead : unalignedReads) {
 			origReadMap.put(unalignedRead.getReadName(), unalignedRead);
 		}
-		
-		// Place contig reads into a map keyed by name and remove soft clips
-//		Map<String, SAMRecord> contigReads = new HashMap<String, SAMRecord>();
-//		SAMFileReader contigReader = new SAMFileReader(new File(contigSam));
-//		contigReader.setValidationStringency(ValidationStringency.SILENT);
-//		
-//		for (SAMRecord contigRead : contigReader) {
-//			removeSoftClips(contigRead);
-//			contigReads.put(contigRead.getReadName(), contigRead);
-//		}
-//		contigReader.close();
 		
 		// Iterate over contig-aligned reads and adjust alignments back to reference
 		SAMFileReader reader = new SAMFileReader(new File(alignedToContigSam));
@@ -670,13 +574,6 @@ public class ReAligner {
 		outputReadsBam = new SAMFileWriterFactory().makeSAMOrBAMWriter(
 				samHeader, true, new File(outputReadsBamFilename));
 	}
-
-	private void outputReads(Set<SAMRecord> updatedReads) {
-		System.out.println("Writing " + updatedReads.size() + " reads.");
-		for (SAMRecord read : updatedReads) {
-			outputReadsBam.addAlignment(read);
-		}
-	}
 	
 	private void writeOutputBam(Set<SAMRecord> updatedReads, String readsBam) {
 		
@@ -706,28 +603,7 @@ public class ReAligner {
 		return assem;
 	}
 
-	/*
-	private void initAssembler() {
-		assembler = new Assembler();
-
-		assembler.setKmerSize(assemblerSettings.getKmerSize());
-		assembler.setMinEdgeFrequency(assemblerSettings.getMinEdgeFrequency());
-		assembler.setMinNodeFrequncy(assemblerSettings.getMinNodeFrequncy());
-		assembler.setMinContigLength(assemblerSettings.getMinContigLength());
-		assembler.setMinEdgeRatio(assemblerSettings.getMinEdgeRatio());
-		assembler.setMaxPotentialContigs(assemblerSettings
-				.getMaxPotentialContigs());
-		assembler.setMinContigRatio(assemblerSettings.getMinContigRatio());
-	}
-	*/
-
 	private void init() {
-		// reference = "/home/lisle/reference/chr17/chr17.fa";
-		// regionsGtf = "/home/lisle/ayc/regions/chr17.gtf";
-		// tempDir = "/home/lisle/ayc/case0/round2/working1";
-
-//		aligner = new Aligner(reference);
-
 		File workingDir = new File(tempDir);
 		if (workingDir.exists()) {
 			if (!workingDir.delete()) {
@@ -874,14 +750,6 @@ public class ReAligner {
 		
 		realigner.setMinContigMapq(1);
 		realigner.setAllowedMismatchesFromContig(2);
-
-		// reference = "/home/lisle/reference/chr17/chr17.fa";
-		// regionsGtf = "/home/lisle/ayc/regions/chr17.gtf";
-		// tempDir = "/home/lisle/ayc/case0/round2/working1";
-
-		// realigner.reAlign("/home/lisle/ayc/case0/round2/case0_tumor.bam",
-		// "/home/lisle/ayc/case0/round2/full.bam");
-
 		realigner.setReference(reference);
 		realigner.setRegionsGtf(regions);
 		realigner.setTempDir(tempDir);

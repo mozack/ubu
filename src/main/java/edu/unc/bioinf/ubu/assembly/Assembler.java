@@ -25,13 +25,6 @@ import net.sf.samtools.SAMRecord;
  */
 public class Assembler {
 		
-//	private int kmerSize = 33;
-//	private int minEdgeFrequency = 15;
-//	private int minNodeFrequncy = 15;
-//
-//	private int minContigLength = 101;
-//	private double minEdgeRatio = .05;
-	
 	private int kmerSize;
 	private int minEdgeFrequency;
 	private int minNodeFrequncy;
