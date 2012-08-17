@@ -562,6 +562,9 @@ public class ReAligner {
 		}
 
 		if (blocks.size() > 0) {
+			// If we've aligned past the end of the contig resulting in a short Cigar
+			// length, append additonal M to the Cigar
+			ReadBlock.fillToLength(blocks, read.getReadLength());
 			int newAlignmentStart = blocks.get(0).getReferenceStart();
 			String newCigar = ReadBlock.toCigarString(blocks);
 
@@ -732,15 +735,22 @@ public class ReAligner {
 		ReAligner realigner = new ReAligner();
 
 		long s = System.currentTimeMillis();
-		
 
+		String input = "/home/lisle/ayc/sim/sim261/chr1/sorted.bam";
+		String output = "/home/lisle/ayc/sim/sim261/chr1/realigned.bam";
+		String reference = "/home/lisle/reference/chr1/chr1.fa";
+		String regions = "/home/lisle/ayc/regions/chr1_261.gtf";
+		String tempDir = "/home/lisle/ayc/sim/sim261/chr1/working";
+
+		
+/*
 		String input = "/home/lisle/ayc/sim/sim261/chr17/sorted.bam";
 //		String input = "/home/lisle/ayc/sim/sim261/chr17/small_sorted.bam";
 		String output = "/home/lisle/ayc/sim/sim261/chr17/realigned.bam";
 		String reference = "/home/lisle/reference/chr17/chr17.fa";
 		String regions = "/home/lisle/ayc/regions/chr17_261.gtf";
 		String tempDir = "/home/lisle/ayc/sim/sim261/chr17/working";
-
+*/
 		
 /*
 		String input = "/home/lisle/ayc/sim/sim261/chr13/sorted.bam";
@@ -775,13 +785,13 @@ public class ReAligner {
 
 
 		AssemblerSettings settings = new AssemblerSettings();
-		settings.setKmerSize(33);
+		settings.setKmerSize(63);
 		settings.setMinContigLength(100);
 		settings.setMinEdgeFrequency(3);
 		settings.setMinNodeFrequncy(3);
 		settings.setMinEdgeRatio(.02);
 		settings.setMaxPotentialContigs(10000);
-		settings.setMinContigRatio(.5);
+		settings.setMinContigRatio(.3);
 		settings.setMinUniqueReads(1);
 
 		realigner.setAssemblerSettings(settings);

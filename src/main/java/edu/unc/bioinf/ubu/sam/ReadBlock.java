@@ -1,6 +1,7 @@
 package edu.unc.bioinf.ubu.sam;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -43,6 +44,10 @@ public class ReadBlock {
 
     public int getLength() {
         return length;
+    }
+    
+    public void setLength(int length) {
+    	this.length = length;
     }
     
     public int getReferenceLength() {
@@ -89,6 +94,16 @@ public class ReadBlock {
     	return cigar.toString();
     }
     
+    public static int getTotalLength(Collection<ReadBlock> blocks) {
+    	int length = 0;
+    	
+    	for (ReadBlock block : blocks) {
+    		length += block.getLength();
+    	}
+    	
+    	return length;
+    }
+    
     //TODO - Move elsewhere and make non-static
     public static List<ReadBlock> getReadBlocks(SAMRecord read) {    
         final Cigar cigar = read.getCigar();
@@ -102,28 +117,54 @@ public class ReadBlock {
             
             readBlocks.add(new ReadBlock(readBase, refBase, e.getLength(), e.getOperator()));
             
-            switch (e.getOperator()) {
-//                case H : break; // ignore hard clips
-//                case P : break; // ignore pads
-                case S : readBase += e.getLength();
-//                System.out.println(read.getReadName());
-                break; // soft clip read bases
-                case N : refBase += e.getLength(); break;  // reference skip
-                case D : refBase += e.getLength(); break;
-                case I : readBase += e.getLength(); break;
-                case M :
-//                case EQ :
-//                case X :
-                    final int length = e.getLength();
-                    readBase += length;
-                    refBase  += length;
-                    break;
-                default : throw new IllegalStateException(
-                        "Case statement didn't deal with cigar op: " + e.getOperator() +
-                        " for read: [" + read.getReadName() + "]");
-            }
+            int[] basePositions = updateBasePositions(readBase, refBase, e.getOperator(), e.getLength());
+            readBase = basePositions[0];
+            refBase = basePositions[1];
         }
         
         return Collections.unmodifiableList(readBlocks);
+    }
+    
+    private static int[] updateBasePositions(int readBase, int refBase, CigarOperator operator, int elemLength) {
+    	switch (operator) {
+	//      case H : break; // ignore hard clips
+	//      case P : break; // ignore pads
+	      case S : readBase += elemLength;
+	//      System.out.println(read.getReadName());
+	      break; // soft clip read bases
+	      case N : refBase += elemLength; break;  // reference skip
+	      case D : refBase += elemLength; break;
+	      case I : readBase += elemLength; break;
+	      case M :
+	//      case EQ :
+	//      case X :
+	          final int length = elemLength;
+	          readBase += length;
+	          refBase  += length;
+	          break;
+	      default : throw new IllegalStateException(
+	              "Case statement didn't deal with cigar op: " + operator);
+    	}
+    	
+    	return new int[] { readBase, refBase };
+    }
+    
+    public static void fillToLength(List<ReadBlock> blocks, int readLength) {
+		int cigarLength = ReadBlock.getTotalLength(blocks);
+		
+		if (cigarLength < readLength) {
+			ReadBlock lastBlock = blocks.get(blocks.size() - 1);
+			if ((lastBlock.getType() == CigarOperator.M) ||
+				(lastBlock.getType() == CigarOperator.S)) {
+				// Last block is M or S, so extend it.
+				lastBlock.setLength(lastBlock.getLength() + readLength - cigarLength);
+			} else {
+				// Last block is not M or S.  Add a new M block.
+				int[] basePositions = updateBasePositions(lastBlock.getReadStart(), lastBlock.getReferenceStart(), lastBlock.getType(), lastBlock.getLength());
+				int readStart = basePositions[0];
+				int refStart = basePositions[1];
+				blocks.add(new ReadBlock(readStart, refStart, readLength-cigarLength, CigarOperator.M));
+			}
+		}
     }
 }
