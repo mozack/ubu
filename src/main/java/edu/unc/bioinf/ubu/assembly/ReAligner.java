@@ -29,6 +29,7 @@ import edu.unc.bioinf.ubu.fastq.Sam2Fastq;
 import edu.unc.bioinf.ubu.gtf.Feature;
 import edu.unc.bioinf.ubu.gtf.GtfLoader;
 import edu.unc.bioinf.ubu.sam.ReadBlock;
+import edu.unc.bioinf.ubu.sam.ReverseComplementor;
 
 public class ReAligner {
 
@@ -59,6 +60,8 @@ public class ReAligner {
 	private List<ReAlignerRunnable> threads = new ArrayList<ReAlignerRunnable>();
 	
 	private List<SAMRecord> unalignedReads = new ArrayList<SAMRecord>();
+	
+	private ReverseComplementor reverseComplementor = new ReverseComplementor();
 	
 	public void reAlign(String inputSam, String outputSam) throws Exception {
 
@@ -389,11 +392,19 @@ public class ReAligner {
 		for (SAMRecord contigRead : contigReader) {
 			//TODO: Does this guarantee no alternate alignments?
 			if (contigRead.getMappingQuality() > 1) {
+				
 				removeSoftClips(contigRead);
+				
+				String bases = contigRead.getReadString();
+				
+				// Express contigs in forward strand context
+				if (contigRead.getReadNegativeStrandFlag()) {
+					bases = reverseComplementor.reverseComplement(bases);
+				}
 				contigReads.put(contigRead.getReadName(), contigRead);
 				
 				writer.append(">" + contigRead.getReadName() + "\n");
-				writer.append(contigRead.getReadString());
+				writer.append(bases);
 				writer.append("\n");
 			}
 		}
@@ -480,7 +491,7 @@ public class ReAligner {
 		for (SAMRecord read : reader) {
 			
 			//TODO: Check for mismatches.  Smarter CIGAR check.
-			if (read.getCigarString().equals("100M")) {
+			if ((read.getCigarString().equals("100M")) && (read.getReadUnmappedFlag() == false)) {
 			
 				SAMRecord origRead = origReadMap.get(read.getReadName());
 				SAMRecord contigRead = contigReads.get(read.getReferenceName());
@@ -491,6 +502,26 @@ public class ReAligner {
 						contigReadBlocks, readPosition);
 				
 				if (updatedRead != null) {
+					//TODO: Move into updateReadAlignment ?
+					if (updatedRead.getMappingQuality() == 0) {
+						updatedRead.setMappingQuality(1);
+					}
+					
+					if (updatedRead.getReadUnmappedFlag()) {
+						updatedRead.setReadUnmappedFlag(false);
+					}
+					
+					updatedRead.setReadNegativeStrandFlag(read.getReadNegativeStrandFlag());
+					
+					// Reverse complement / reverse original read bases and qualities if
+					// the original read was unmapped and is now on the reverse strand
+					// Originally mapped reads would already be expressed in forward strand context
+					// TODO: Do we need to handle forward / reverse strand change.  Is this even possible?
+					if ((origRead.getReadUnmappedFlag()) && (read.getReadNegativeStrandFlag())) {
+						updatedRead.setReadString(reverseComplementor.reverseComplement(updatedRead.getReadString()));
+						updatedRead.setBaseQualityString(reverseComplementor.reverse(updatedRead.getBaseQualityString()));
+					}
+					
 					updatedReads.add(updatedRead);
 				}
 			}
@@ -696,21 +727,21 @@ public class ReAligner {
 		String tempDir = "/home/lisle/ayc/sim/sim261/chr1/working";
 */
 		
-/*
+
 		String input = "/home/lisle/ayc/sim/sim261/chr17/sorted.bam";
-//		String input = "/home/lisle/ayc/sim/sim261/chr17/small_sorted.bam";
 		String output = "/home/lisle/ayc/sim/sim261/chr17/realigned.bam";
 		String reference = "/home/lisle/reference/chr17/chr17.fa";
 		String regions = "/home/lisle/ayc/regions/chr17_261.gtf";
 		String tempDir = "/home/lisle/ayc/sim/sim261/chr17/working";
-*/
-		
 
+		
+/*
 		String input = "/home/lisle/ayc/sim/sim261/chr13/sorted.bam";
 		String output = "/home/lisle/ayc/sim/sim261/chr13/realigned.bam";
 		String reference = "/home/lisle/reference/chr13/chr13.fa";
 		String regions = "/home/lisle/ayc/regions/chr13_261.gtf";
 		String tempDir = "/home/lisle/ayc/sim/sim261/chr13/working";
+*/
 		
 /*		
 		String input = "/home/lisle/ayc/sim/sim261/chr16/sorted.bam";
