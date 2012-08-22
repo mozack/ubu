@@ -204,7 +204,13 @@ public class ReAligner {
 	private void runCommand(String[] cmd) throws IOException, InterruptedException {
 		
 		//String cmd = "bwa bwasw -f " + outputSam + " " + reference + " " + input;
-		System.out.println("Running: [" + cmd + "]");
+		StringBuffer cmdStr = new StringBuffer();
+		for (String substring : cmd) {
+			cmdStr.append(substring);
+			cmdStr.append(" ");
+		}
+		
+		System.out.println("Running: [" + cmdStr + "]");
 		
 		long s = System.currentTimeMillis();
 		
