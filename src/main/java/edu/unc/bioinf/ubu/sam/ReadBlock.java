@@ -50,6 +50,10 @@ public class ReadBlock {
     	this.length = length;
     }
     
+    public void setReferenceStart(int referenceStart) {
+    	this.referenceStart = referenceStart;
+    }
+    
     public int getReferenceLength() {
     	int refLength = 0;
     	
