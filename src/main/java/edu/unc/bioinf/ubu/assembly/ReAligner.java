@@ -549,6 +549,17 @@ public class ReAligner {
 				ReadBlock block = contigBlock.getSubBlock(accumulatedLength,
 						contigPosition, read.getReadLength()
 								- accumulatedLength);
+				
+				// If this is an insert, we need to adjust the alignment start
+				if ((block.getType() == CigarOperator.I) && (block.getLength() != 0)) {
+					contigPosition = contigPosition - (contigBlock.getLength() - block.getLength());
+					block.setReferenceStart(block.getReferenceStart() - (contigBlock.getLength() - block.getLength()));
+//					block = contigBlock.getSubBlock(accumulatedLength,
+//								contigPosition, read.getReadLength()
+//								- accumulatedLength);
+				}
+				
+				//TODO: Drop leading and trailing delete blocks
 
 				// TODO: Investigate how this could happen
 				if (block.getLength() != 0) {
@@ -727,12 +738,19 @@ public class ReAligner {
 		String tempDir = "/home/lisle/ayc/sim/sim261/chr1/working";
 */
 		
-
+/*
 		String input = "/home/lisle/ayc/sim/sim261/chr17/sorted.bam";
 		String output = "/home/lisle/ayc/sim/sim261/chr17/realigned.bam";
 		String reference = "/home/lisle/reference/chr17/chr17.fa";
 		String regions = "/home/lisle/ayc/regions/chr17_261.gtf";
 		String tempDir = "/home/lisle/ayc/sim/sim261/chr17/working";
+*/		
+		String input = "/home/lisle/ayc/sim/sim261/chr11/sorted.bam";
+		String output = "/home/lisle/ayc/sim/sim261/chr11/realigned.bam";
+		String reference = "/home/lisle/reference/chr11/chr11.fa";
+		String regions = "/home/lisle/ayc/regions/chr11_261.gtf";
+		String tempDir = "/home/lisle/ayc/sim/sim261/chr11/working";
+
 
 		
 /*
