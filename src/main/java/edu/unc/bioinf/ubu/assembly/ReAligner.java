@@ -523,6 +523,8 @@ public class ReAligner {
 					// the original read was unmapped and is now on the reverse strand
 					// Originally mapped reads would already be expressed in forward strand context
 					// TODO: Do we need to handle forward / reverse strand change.  Is this even possible?
+					// TODO: What about reads that align across chromosomes and are tagged as unmapped
+					//       Might they already be reverse complemented?
 					if ((origRead.getReadUnmappedFlag()) && (read.getReadNegativeStrandFlag())) {
 						updatedRead.setReadString(reverseComplementor.reverseComplement(updatedRead.getReadString()));
 						updatedRead.setBaseQualityString(reverseComplementor.reverse(updatedRead.getBaseQualityString()));
