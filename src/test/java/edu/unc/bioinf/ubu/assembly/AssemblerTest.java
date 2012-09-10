@@ -1,14 +1,14 @@
 package edu.unc.bioinf.ubu.assembly;
 
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertTrue;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 
-import junit.framework.Assert;
+import org.testng.Assert;
 
 import org.testng.annotations.Test;
 

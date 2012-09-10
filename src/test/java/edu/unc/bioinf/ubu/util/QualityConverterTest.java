@@ -1,6 +1,6 @@
 package edu.unc.bioinf.ubu.util;
 
-import static junit.framework.Assert.assertEquals;
+import static org.testng.Assert.assertEquals;
 
 import org.testng.annotations.Test;
 
