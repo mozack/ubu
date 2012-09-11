@@ -55,7 +55,8 @@ public class Assembler {
 	
 	List<SAMRecord> allReads = new ArrayList<SAMRecord>();
 		
-	public List<Contig> assembleContigs(String inputSam, String output) throws FileNotFoundException, IOException {
+	//TODO: Do not keep contigs or reads in memory.
+	public List<Contig> assembleContigs(String inputSam, String output, String prefix) throws FileNotFoundException, IOException {
         SAMFileReader reader = new SAMFileReader(new File(inputSam));
         reader.setValidationStringency(ValidationStringency.SILENT);
 
@@ -95,7 +96,7 @@ public class Assembler {
 		try {
 			buildContigs();
 	//		mergeContigs();
-			outputContigs();
+			outputContigs(prefix);
 		} catch (DepthExceededException e) {
 			System.out.println("DEPTH EXCEEDED for : " + inputSam);
 			contigs.clear();
@@ -188,14 +189,14 @@ public class Assembler {
 		}
 	}
 	
-	private void outputContigs() throws IOException {
+	private void outputContigs(String prefix) throws IOException {
 		
 		System.out.println("Writing " + contigs.size() + " contigs.");
 		
 		int count = 0;
 		
 		for (Contig contig : contigs) {
-			contig.setDescriptor("contig" + count++ + "_" + contig.getDescriptor());
+			contig.setDescriptor(prefix + "_" + count++ + "_" + contig.getDescriptor());
 			writer.append(">" + contig.getDescriptor() + "\n");
 			writer.append(contig.getSequence());
 			writer.append("\n");
@@ -426,7 +427,7 @@ public class Assembler {
 		ayc.setMaxPotentialContigs(30000);
 		ayc.setMinContigRatio(.5);
 		
-		ayc.assembleContigs("/home/lisle/ayc/sim/sim1/chr21/chr21_37236845_37237045.bam", "/home/lisle/ayc/sim/sim1/chr21/1.fasta");
+		ayc.assembleContigs("/home/lisle/ayc/sim/sim1/chr21/chr21_37236845_37237045.bam", "/home/lisle/ayc/sim/sim1/chr21/1.fasta", "foo");
 		
 //		ayc.assemble("/home/lisle/ayc/case0/normal_7576572_7577692.fastq", "/home/lisle/ayc/case0/normal_33_05.fasta");
 //		ayc.assemble("/home/lisle/ayc/case0/tumor_7576572_7577692.fastq", "/home/lisle/ayc/case0/tumor_33_05.fasta");

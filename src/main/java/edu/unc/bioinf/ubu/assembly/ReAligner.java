@@ -12,6 +12,7 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -88,9 +89,6 @@ public class ReAligner {
 		log("Initializing output SAM File");
 		initOutputFile(outputSam);
 		
-		log("Caching unaligned reads");
-		getUnalignedReads(inputSam);
-
 		log("Iterating over regions");
 		for (Feature region : regions) {
 			//processRegion(region, inputSam);
@@ -101,16 +99,47 @@ public class ReAligner {
 		log("Waiting for all threads to complete");
 		waitForAllThreadsToComplete();
 		
-		log("Writing to final destination");
+		log("Combining contigs");
+		String contigFasta = tempDir + "/" + "all_contigs.fasta";
+		combineContigs(contigFasta);
 		
-		for (Feature region : regions) {
-			outputRegion(region);
-		}
-
-		log("Closing output BAM");
-		outputReadsBam.close();
+		log("Aligning contigs");
+		Aligner aligner = new Aligner(reference);
+		String contigsSam = tempDir + "/" + "all_contigs.sam";
+		//TODO: configure threads
+		aligner.align(contigFasta, contigsSam);
+		
+		log("Cleaning contigs");
+		String cleanContigsFasta = tempDir + "/" + "clean_contigs.fasta";
+		cleanAndOutputContigs(contigsSam, cleanContigsFasta);
+		
+		log("Aligning original reads to contigs");
+		String alignedToContigSam = tempDir + "/" + "align_to_contig.sam";
+		this.alignToContigs(inputSam, alignedToContigSam, cleanContigsFasta);
+		
+		log("Convert aligned to contig to bam, and sorting bams");
+		String alignedToContigBam = tempDir + "/" + "align_to_contig.bam";
+		String sortedAlignedToContig = tempDir + "/" + "sorted_aligned_to_contig";
+		String sortedOriginalReads = tempDir + "/" + "sorted_original_reads"; 
+		runCommand("samtools view -bS " + alignedToContigSam + " -o " + alignedToContigBam);
+		runCommand("samtools sort -n " + alignedToContigBam + " " + sortedAlignedToContig);
+		runCommand("samtools sort -n " + inputSam + " " + sortedOriginalReads);
+		sortedAlignedToContig += ".bam";
+		sortedOriginalReads += ".bam";
+		
+		log("Adjust reads");
+		String unaligned = tempDir + "/" + "unaligned_reads.bam";
+		adjustReads(sortedOriginalReads, sortedAlignedToContig, unaligned);
 
 		System.out.println("Done.");
+	}
+	
+	private void combineContigs(String contigFasta) throws IOException, InterruptedException {
+		
+		for (Feature region : regions) {
+			String regionContigsFasta = tempDir + "/" + region.getDescriptor() + "_contigs.fasta";
+			appendFile(regionContigsFasta, contigFasta);
+		}
 	}
 	
 	public synchronized void addThread(ReAlignerRunnable thread) {
@@ -147,35 +176,6 @@ public class ReAligner {
 		ReAlignerRunnable thread = new ReAlignerRunnable(this, region, inputSam);
 		addThread(thread);
 		new Thread(thread).start();
-	}
-
-	private void outputRegion(Feature region) {
-		String regionBam  = tempDir + "/" + region.getDescriptor() + "_output.bam";
-		
-		File regionFile = new File(regionBam);
-		
-		if (regionFile.exists()) {
-	        SAMFileReader reader = new SAMFileReader(new File(regionBam));
-	        reader.setValidationStringency(ValidationStringency.SILENT);
-	
-	        for (SAMRecord read : reader) {
-	        	outputReadsBam.addAlignment(read);
-	        }
-	        
-	        reader.close();
-		}
-	}
-	
-	private Aligner buildAligner(Feature region) {
-		Aligner aligner;
-		
-		if (reference != null) {
-			aligner = new Aligner(reference);
-		} else {
-			aligner = new Aligner(referenceDir + "/" + region.getSeqname() + ".fa");
-		}
-		
-		return aligner;
 	}
 	
 	//TODO: Factor out, and use where appropriate
@@ -270,29 +270,10 @@ public class ReAligner {
 			String alignedToContigSam = tempDir + "/" + region.getDescriptor() + "_aligned_to_contig.sam";
 			String unalignedFastq = getUnalignedFastqFile();
 			
-	//		log("Initializing assembler");
 			Assembler assem = newAssembler();
 			
-			Aligner aligner = buildAligner(region);
+			assem.assembleContigs(targetRegionBam, contigsFasta, region.getDescriptor());
 			
-	//		log("Assembling contigs");
-			List<Contig> contigs = assem.assembleContigs(targetRegionBam, contigsFasta);
-			
-			if (contigs.size() > 0) {
-	//			log("Aligning contigs");
-				aligner.align(contigsFasta, contigsSam);
-				
-				Map<String, SAMRecord> contigReads = loadCleanAndOutputContigs(contigsSam, cleanContigsFasta);
-				
-	//			log("Adjusting reads");
-				adjustReads(contigsSam, updatedReads, assem.allReads,
-						cleanContigsFasta, targetRegionFastq, targetRegionBam, alignedToContigSam, contigReads);
-				
-	//			log("Writing adjusted reads");
-				writeOutputBam(updatedReads, outputBam);
-			} else {
-				log ("No contigs assembled for region: " + region.getDescriptor());
-			}
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw e;
@@ -384,14 +365,11 @@ public class ReAligner {
 		String[] cmd = new String[] { "bash", "-c", "cat " + file1 + " >> " + file2 };
 		runCommand(cmd);
 	}
-	
-	//TODO: Revisit minimum contig length
-	private Map<String, SAMRecord> loadCleanAndOutputContigs(String contigsSam, String cleanContigsFasta) throws IOException {
+		
+	private void cleanAndOutputContigs(String contigsSam, String cleanContigsFasta) throws IOException {
 		
 		BufferedWriter writer = new BufferedWriter(new FileWriter(cleanContigsFasta, false));
 		
-		// Place contig reads into a map keyed by name and remove soft clips
-		Map<String, SAMRecord> contigReads = new HashMap<String, SAMRecord>();
 		SAMFileReader contigReader = new SAMFileReader(new File(contigsSam));
 		contigReader.setValidationStringency(ValidationStringency.SILENT);
 		
@@ -407,9 +385,14 @@ public class ReAligner {
 				if (contigRead.getReadNegativeStrandFlag()) {
 					bases = reverseComplementor.reverseComplement(bases);
 				}
-				contigReads.put(contigRead.getReadName(), contigRead);
 				
-				writer.append(">" + contigRead.getReadName() + "\n");
+				//TODO: Safer delimiter?  This assumes no ~ in any read
+				String contigReadStr = contigRead.getSAMString();
+				contigReadStr = contigReadStr.replace('\t','~');
+				
+				String contigName = contigRead.getReadName() + "~" + contigReadStr; 
+				
+				writer.append(">" + contigName + "\n");
 				writer.append(bases);
 				writer.append("\n");
 			}
@@ -417,8 +400,6 @@ public class ReAligner {
 		contigReader.close();
 		
 		writer.close();
-		
-		return contigReads;
 	}
 	
 	// Assumes entirely soft clipped reads are filtered prior to here.
@@ -461,83 +442,106 @@ public class ReAligner {
 		}
 	}
 	
-	private void adjustReads(String contigSam,
-			Set<SAMRecord> updatedReads, List<SAMRecord> allReads,
-			String contigFasta, String regionFastq, String regionBam, 
-			String alignedToContigSam, Map<String, SAMRecord> contigReads) throws InterruptedException, IOException {
-		
-		// Convert region bam to fastq
-		sam2Fastq(regionBam, regionFastq);
-		
-		// Append unaligned reads to the region fastq
-		appendFile(getUnalignedFastqFile(), regionFastq);
+	private void alignToContigs(String inputSam, String alignedToContigSam, String contigFasta) throws IOException, InterruptedException {
+		// Convert original bam to fastq
+		String fastq = tempDir + "/" + "original_reads.fastq";
+		sam2Fastq(inputSam, fastq);
 		
 		// Build contig fasta index
 		Aligner contigAligner = new Aligner(contigFasta);
 		contigAligner.index();
 		
 		// Align region fastq against assembled contigs
-		contigAligner.shortAlign(regionFastq, alignedToContigSam);
+		contigAligner.shortAlign(fastq, alignedToContigSam);
+	}
+	
+	private void adjustReads(String originalReadsSam, String alignedToContigSam, String unalignedSam) throws IOException {
 
-		// Place original reads into a map keyed by name
-		Map<String, SAMRecord> origReadMap = new HashMap<String, SAMRecord>();
-		for (SAMRecord origRead : allReads) {
-			origReadMap.put(origRead.getReadName(), origRead);
-		}
+		String unalignedBam = tempDir + "/" + "unaligned_to_contig.bam";
 		
-		// Add unaligned reads to origReadMap
-		for (SAMRecord unalignedRead : unalignedReads) {
-			origReadMap.put(unalignedRead.getReadName(), unalignedRead);
-		}
+		SAMFileWriter unalignedReadsBam = new SAMFileWriterFactory().makeSAMOrBAMWriter(
+				samHeader, true, new File(unalignedBam));
 		
-		// Iterate over contig-aligned reads and adjust alignments back to reference
-		SAMFileReader reader = new SAMFileReader(new File(alignedToContigSam));
-		reader.setValidationStringency(ValidationStringency.SILENT);
+		SAMFileReader contigReader = new SAMFileReader(new File(alignedToContigSam));
+		contigReader.setValidationStringency(ValidationStringency.SILENT);
 		
-		for (SAMRecord read : reader) {
+		SAMFileReader origReader = new SAMFileReader(new File(originalReadsSam));
+		origReader.setValidationStringency(ValidationStringency.SILENT);
+
+		Iterator<SAMRecord> contigIter = contigReader.iterator();
+		Iterator<SAMRecord> origIter = origReader.iterator();
+		
+		SAMRecord cachedContig = null;
+		
+		SamStringReader samStringReader = new SamStringReader();
+		
+		while ((contigIter.hasNext() || cachedContig != null) && (origIter.hasNext())) {
+			SAMRecord orig = origIter.next();
+			SAMRecord read;
 			
-			//TODO: Check for mismatches.  Smarter CIGAR check.
-			if ((read.getCigarString().equals("100M")) && (read.getReadUnmappedFlag() == false)) {
+			if (cachedContig != null) {
+				read = cachedContig;
+				cachedContig = null;
+			} else {
+				read = contigIter.next();
+			}
 			
-				SAMRecord origRead = origReadMap.get(read.getReadName());
-				SAMRecord contigRead = contigReads.get(read.getReferenceName());
-				List<ReadBlock> contigReadBlocks = ReadBlock.getReadBlocks(contigRead);
+			if (orig.getReadName().equals(read.getReadName())) {
+				//TODO: Check for mismatches.  Smarter CIGAR check.
+				if ((read.getCigarString().equals("100M")) && (read.getReadUnmappedFlag() == false)) {
 				
-				ReadPosition readPosition = new ReadPosition(origRead, read.getAlignmentStart()-1, -1);
-				SAMRecord updatedRead = updateReadAlignment(contigRead,
-						contigReadBlocks, readPosition);
-				
-				if (updatedRead != null) {
-					//TODO: Move into updateReadAlignment ?
-					if (updatedRead.getMappingQuality() == 0) {
-						updatedRead.setMappingQuality(1);
+					SAMRecord origRead = orig;
+					String contigReadStr = read.getReferenceName();
+					contigReadStr = contigReadStr.substring(contigReadStr.indexOf('~')+1);
+					contigReadStr = contigReadStr.replace('~', '\t');
+					SAMRecord contigRead = samStringReader.getRead(contigReadStr);
+
+					List<ReadBlock> contigReadBlocks = ReadBlock.getReadBlocks(contigRead);
+					
+					ReadPosition readPosition = new ReadPosition(origRead, read.getAlignmentStart()-1, -1);
+					SAMRecord updatedRead = updateReadAlignment(contigRead,
+							contigReadBlocks, readPosition);
+					
+					if (updatedRead != null) {
+						//TODO: Move into updateReadAlignment ?
+						if (updatedRead.getMappingQuality() == 0) {
+							updatedRead.setMappingQuality(1);
+						}
+						
+						if (updatedRead.getReadUnmappedFlag()) {
+							updatedRead.setReadUnmappedFlag(false);
+						}
+						
+						updatedRead.setReadNegativeStrandFlag(read.getReadNegativeStrandFlag());
+						
+						// Reverse complement / reverse original read bases and qualities if
+						// the original read was unmapped and is now on the reverse strand
+						// Originally mapped reads would already be expressed in forward strand context
+						// TODO: Do we need to handle forward / reverse strand change.  Is this even possible?
+						// TODO: What about reads that align across chromosomes and are tagged as unmapped
+						//       Might they already be reverse complemented?
+						if ((origRead.getReadUnmappedFlag()) && (read.getReadNegativeStrandFlag())) {
+							updatedRead.setReadString(reverseComplementor.reverseComplement(updatedRead.getReadString()));
+							updatedRead.setBaseQualityString(reverseComplementor.reverse(updatedRead.getBaseQualityString()));
+						}
+						
+						outputReadsBam.addAlignment(updatedRead);
 					}
-					
-					if (updatedRead.getReadUnmappedFlag()) {
-						updatedRead.setReadUnmappedFlag(false);
-					}
-					
-					updatedRead.setReadNegativeStrandFlag(read.getReadNegativeStrandFlag());
-					
-					// Reverse complement / reverse original read bases and qualities if
-					// the original read was unmapped and is now on the reverse strand
-					// Originally mapped reads would already be expressed in forward strand context
-					// TODO: Do we need to handle forward / reverse strand change.  Is this even possible?
-					// TODO: What about reads that align across chromosomes and are tagged as unmapped
-					//       Might they already be reverse complemented?
-					if ((origRead.getReadUnmappedFlag()) && (read.getReadNegativeStrandFlag())) {
-						updatedRead.setReadString(reverseComplementor.reverseComplement(updatedRead.getReadString()));
-						updatedRead.setBaseQualityString(reverseComplementor.reverse(updatedRead.getBaseQualityString()));
-					}
-					
-					updatedReads.add(updatedRead);
 				}
+
+			} else {
+				cachedContig = read;
+				unalignedReadsBam.addAlignment(orig);
 			}
 		}
 		
-		reader.close();
+		outputReadsBam.close();
+		unalignedReadsBam.close();
+		origReader.close();
+		contigReader.close();
+		
 	}
-
+	
 	SAMRecord updateReadAlignment(SAMRecord contigRead,
 			List<ReadBlock> contigReadBlocks, ReadPosition orig) {
 		List<ReadBlock> blocks = new ArrayList<ReadBlock>();
@@ -624,19 +628,7 @@ public class ReAligner {
 		outputReadsBam = new SAMFileWriterFactory().makeSAMOrBAMWriter(
 				samHeader, true, new File(outputReadsBamFilename));
 	}
-	
-	private void writeOutputBam(Set<SAMRecord> updatedReads, String readsBam) {
 		
-		SAMFileWriter output = new SAMFileWriterFactory().makeSAMOrBAMWriter(
-				samHeader, true, new File(readsBam));
-		
-		for (SAMRecord read : updatedReads) {
-			output.addAlignment(read);
-		}
-		
-		output.close();
-	}
-	
 	private Assembler newAssembler() {
 		Assembler assem = new Assembler();
 
@@ -753,11 +745,11 @@ public class ReAligner {
 		String regions = "/home/lisle/ayc/regions/chr17_261.gtf";
 		String tempDir = "/home/lisle/ayc/sim/sim261/chr17/working";
 */		
-		String input = "/home/lisle/ayc/sim/sim261/chr11/sorted.bam";
-		String output = "/home/lisle/ayc/sim/sim261/chr11/realigned.bam";
-		String reference = "/home/lisle/reference/chr11/chr11.fa";
-		String regions = "/home/lisle/ayc/regions/chr11_261.gtf";
-		String tempDir = "/home/lisle/ayc/sim/sim261/chr11/working";
+		String input = "/home/lmose/dev/ayc/sim/sim261/chr11/sorted.bam";
+		String output = "/home/lmose/dev/ayc/sim/sim261/chr11/realigned.bam";
+		String reference = "/home/lmose/reference/chr11/chr11.fa";
+		String regions = "/home/lmose/dev/ayc/regions/chr11_261.gtf";
+		String tempDir = "/home/lmose/dev/ayc/sim/sim261/chr11/working";
 
 
 		
