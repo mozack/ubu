@@ -103,10 +103,28 @@ public class ReAligner {
 		String contigFasta = tempDir + "/" + "all_contigs.fasta";
 		combineContigs(contigFasta);
 		
+		processContigs(contigFasta, tempDir, inputSam);
+		
+		/*
+		log("Assembling unaligned reads");
+		String unalignedSam = tempDir + "/" + "unaligned_reads.bam";
+		
+		String unalignedDir = tempDir + "/unaligned";
+		String unalignedContigFasta = unalignedDir + "/unaligned_contigs.fasta";
+		Assembler assem = newAssembler();
+		assem.assembleContigs(unalignedSam, unalignedContigFasta, "unaligned");
+		
+		String unalignedBam = tempDir + "/" + "unaligned_to_contig.bam";
+		
+		processContigs(unalignedContigFasta, unalignedDir, unalignedBam);
+		*/
+		
+		outputReadsBam.close();
+		
+		/*
 		log("Aligning contigs");
 		Aligner aligner = new Aligner(reference, numThreads);
 		String contigsSam = tempDir + "/" + "all_contigs.sam";
-		//TODO: configure threads
 		aligner.align(contigFasta, contigsSam);
 		
 		log("Cleaning contigs");
@@ -130,8 +148,38 @@ public class ReAligner {
 		log("Adjust reads");
 		String unaligned = tempDir + "/" + "unaligned_reads.bam";
 		adjustReads(sortedOriginalReads, sortedAlignedToContig, unaligned);
+		*/
 
 		System.out.println("Done.");
+	}
+	
+	private void processContigs(String contigFasta, String tempDir, String inputSam) throws InterruptedException, IOException {
+		log("Aligning contigs");
+		Aligner aligner = new Aligner(reference, numThreads);
+		String contigsSam = tempDir + "/" + "all_contigs.sam";
+		aligner.align(contigFasta, contigsSam);
+		
+		log("Cleaning contigs");
+		String cleanContigsFasta = tempDir + "/" + "clean_contigs.fasta";
+		cleanAndOutputContigs(contigsSam, cleanContigsFasta);
+		
+		log("Aligning original reads to contigs");
+		String alignedToContigSam = tempDir + "/" + "align_to_contig.sam";
+		this.alignToContigs(inputSam, alignedToContigSam, cleanContigsFasta);
+		
+		log("Convert aligned to contig to bam, and sorting bams");
+		String alignedToContigBam = tempDir + "/" + "align_to_contig.bam";
+		String sortedAlignedToContig = tempDir + "/" + "sorted_aligned_to_contig";
+		String sortedOriginalReads = tempDir + "/" + "sorted_original_reads"; 
+		runCommand("samtools view -bS " + alignedToContigSam + " -o " + alignedToContigBam);
+		runCommand("samtools sort -n " + alignedToContigBam + " " + sortedAlignedToContig);
+		runCommand("samtools sort -n " + inputSam + " " + sortedOriginalReads);
+		sortedAlignedToContig += ".bam";
+		sortedOriginalReads += ".bam";
+		
+		log("Adjust reads");
+		String unaligned = tempDir + "/" + "unaligned_reads.bam";
+		adjustReads(sortedOriginalReads, sortedAlignedToContig, unaligned);
 	}
 	
 	private void combineContigs(String contigFasta) throws IOException, InterruptedException {
@@ -392,7 +440,7 @@ public class ReAligner {
 				
 				String contigName = contigRead.getReadName() + "~" + contigReadStr; 
 				
-				writer.append(">" + contigName + "\n");
+				writer.append(">" + contigName);
 				writer.append(bases);
 				writer.append("\n");
 			}
@@ -534,8 +582,7 @@ public class ReAligner {
 				unalignedReadsBam.addAlignment(orig);
 			}
 		}
-		
-		outputReadsBam.close();
+
 		unalignedReadsBam.close();
 		origReader.close();
 		contigReader.close();
@@ -655,6 +702,12 @@ public class ReAligner {
 
 		if (!workingDir.mkdir()) {
 			throw new IllegalStateException("Unable to create: " + tempDir);
+		}
+		
+		File unalignedTempDir = new File(tempDir + "/unaligned");
+		
+		if (!unalignedTempDir.mkdir()) {
+			throw new IllegalStateException("Unable to create: " + tempDir + "/unaligned");
 		}
 	}
 
