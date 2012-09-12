@@ -104,7 +104,7 @@ public class ReAligner {
 		combineContigs(contigFasta);
 		
 		log("Aligning contigs");
-		Aligner aligner = new Aligner(reference);
+		Aligner aligner = new Aligner(reference, numThreads);
 		String contigsSam = tempDir + "/" + "all_contigs.sam";
 		//TODO: configure threads
 		aligner.align(contigFasta, contigsSam);
@@ -448,7 +448,7 @@ public class ReAligner {
 		sam2Fastq(inputSam, fastq);
 		
 		// Build contig fasta index
-		Aligner contigAligner = new Aligner(contigFasta);
+		Aligner contigAligner = new Aligner(contigFasta, numThreads);
 		contigAligner.index();
 		
 		// Align region fastq against assembled contigs

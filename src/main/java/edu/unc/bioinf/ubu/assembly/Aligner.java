@@ -5,13 +5,15 @@ import java.io.IOException;
 public class Aligner {
 	
 	private String reference;
+	private int numThreads;
 	
-	public Aligner(String reference) {
+	public Aligner(String reference, int numThreads) {
 		this.reference = reference;
+		this.numThreads = numThreads;
 	}
 	
 	public void align(String input, String outputSam) throws IOException, InterruptedException {
-		String cmd = "bwa bwasw -f " + outputSam + " " + reference + " " + input;
+		String cmd = "bwa bwasw -t " + numThreads + " -f " + outputSam + " " + reference + " " + input;
 		
 		runCommand(cmd);
 	}
@@ -41,7 +43,7 @@ public class Aligner {
 	public void shortAlign(String input, String outputSam) throws IOException, InterruptedException {
 		String sai = outputSam + ".sai";
 		
-		String aln = "bwa aln " + reference + " " + input + " -f " + sai;
+		String aln = "bwa aln " + reference + " " + input + " -f " + sai + " -t " + numThreads;
 		
 		runCommand(aln);
 		
