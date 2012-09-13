@@ -22,6 +22,7 @@ public class ReAlignerOptions extends Options {
 	private static final String NUM_THREADS = "threads";
 	private static final String MIN_UNIQUE_READS = "mur";
 	private static final String ALLOWED_MISMATCHES_FROM_CONTIG = "amc";
+	private static final String SKIP_UNALIGNED_ASSEMBLY = "no-unalign";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -47,6 +48,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(MIN_CONTIG_MAPQ, "Minimum contig mapping quality").withRequiredArg().ofType(Integer.class);
             parser.accepts(MIN_UNIQUE_READS, "Minimum number of unique reads per node").withRequiredArg().ofType(Integer.class);
             parser.accepts(ALLOWED_MISMATCHES_FROM_CONTIG, "Maximum number of allowed mismatches from contig for a read (default zero).").withRequiredArg().ofType(Integer.class);
+            parser.accepts(SKIP_UNALIGNED_ASSEMBLY, "Skip assembly of reads that do not align to contigs.");
     	}
     	
     	return parser;
@@ -158,6 +160,10 @@ public class ReAlignerOptions extends Options {
 	
 	public int getMinUniqueReads() {
 		return (Integer) getOptions().valueOf(MIN_UNIQUE_READS);
+	}
+	
+	public boolean isSkipUnalignedAssembly() {
+		return getOptions().has(SKIP_UNALIGNED_ASSEMBLY);
 	}
 	
 	public boolean isValid() {

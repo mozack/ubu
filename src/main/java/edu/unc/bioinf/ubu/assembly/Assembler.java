@@ -56,7 +56,7 @@ public class Assembler {
 	List<SAMRecord> allReads = new ArrayList<SAMRecord>();
 		
 	//TODO: Do not keep contigs or reads in memory.
-	public List<Contig> assembleContigs(String inputSam, String output, String prefix) throws FileNotFoundException, IOException {
+	public boolean assembleContigs(String inputSam, String output, String prefix) throws FileNotFoundException, IOException {
         SAMFileReader reader = new SAMFileReader(new File(inputSam));
         reader.setValidationStringency(ValidationStringency.SILENT);
 
@@ -108,7 +108,7 @@ public class Assembler {
 		writer.close();
 		reader.close();
 		
-		return contigs;
+		return contigs.size() > 0;
 	}
 	
 	public void setKmerSize(int kmerSize) {

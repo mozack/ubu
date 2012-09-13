@@ -58,6 +58,8 @@ public class ReAligner {
 	
 	private int allowedMismatchesFromContig = 0;
 	
+	private boolean shouldReprocessUnaligned = true;
+	
 	private List<ReAlignerRunnable> threads = new ArrayList<ReAlignerRunnable>();
 	
 	private List<SAMRecord> unalignedReads = new ArrayList<SAMRecord>();
@@ -105,19 +107,21 @@ public class ReAligner {
 		
 		processContigs(contigFasta, tempDir, inputSam);
 		
-		/*
-		log("Assembling unaligned reads");
-		String unalignedSam = tempDir + "/" + "unaligned_reads.bam";
-		
-		String unalignedDir = tempDir + "/unaligned";
-		String unalignedContigFasta = unalignedDir + "/unaligned_contigs.fasta";
-		Assembler assem = newAssembler();
-		assem.assembleContigs(unalignedSam, unalignedContigFasta, "unaligned");
-		
-		String unalignedBam = tempDir + "/" + "unaligned_to_contig.bam";
-		
-		processContigs(unalignedContigFasta, unalignedDir, unalignedBam);
-		*/
+		if (shouldReprocessUnaligned) {		
+			log("Assembling unaligned reads");
+			String unalignedSam = tempDir + "/" + "unaligned_to_contig.bam";
+			
+			String unalignedDir = tempDir + "/unaligned";
+			String unalignedContigFasta = unalignedDir + "/unaligned_contigs.fasta";
+			Assembler assem = newAssembler();
+			boolean hasContigs = assem.assembleContigs(unalignedSam, unalignedContigFasta, "unaligned");
+			
+//			String finalUnaligned = unalignedDir + "/" + "unaligned_to_contig.bam";
+			
+			if (hasContigs) {
+				processContigs(unalignedContigFasta, unalignedDir, unalignedSam);
+			}
+		}
 		
 		outputReadsBam.close();
 		
@@ -178,7 +182,7 @@ public class ReAligner {
 		sortedOriginalReads += ".bam";
 		
 		log("Adjust reads");
-		String unaligned = tempDir + "/" + "unaligned_reads.bam";
+		String unaligned = tempDir + "/" + "unaligned_to_contig.bam";
 		adjustReads(sortedOriginalReads, sortedAlignedToContig, unaligned);
 	}
 	
@@ -436,6 +440,7 @@ public class ReAligner {
 				
 				//TODO: Safer delimiter?  This assumes no ~ in any read
 				String contigReadStr = contigRead.getSAMString();
+				contigRead.setReadString("");
 				contigReadStr = contigReadStr.replace('\t','~');
 				
 				String contigName = contigRead.getReadName() + "~" + contigReadStr; 
@@ -504,11 +509,9 @@ public class ReAligner {
 	}
 	
 	private void adjustReads(String originalReadsSam, String alignedToContigSam, String unalignedSam) throws IOException {
-
-		String unalignedBam = tempDir + "/" + "unaligned_to_contig.bam";
 		
 		SAMFileWriter unalignedReadsBam = new SAMFileWriterFactory().makeSAMOrBAMWriter(
-				samHeader, true, new File(unalignedBam));
+				samHeader, true, new File(unalignedSam));
 		
 		SAMFileReader contigReader = new SAMFileReader(new File(alignedToContigSam));
 		contigReader.setValidationStringency(ValidationStringency.SILENT);
@@ -738,6 +741,10 @@ public class ReAligner {
 	public void setAllowedMismatchesFromContig(int allowedMismatchesFromContig) {
 		this.allowedMismatchesFromContig = allowedMismatchesFromContig;
 	}
+	
+	public void setShouldReprocessUnaligned(boolean shouldReprocessUnaligned) {
+		this.shouldReprocessUnaligned = shouldReprocessUnaligned;
+	}
 
 	public static void run(String[] args) throws Exception {
 		ReAlignerOptions options = new ReAlignerOptions();
@@ -767,6 +774,7 @@ public class ReAligner {
 			realigner.setNumThreads(options.getNumThreads());
 			realigner.setMinContigMapq(options.getMinContigMapq());
 			realigner.setAllowedMismatchesFromContig(options.getAllowedMismatchesFromContig());
+			realigner.setShouldReprocessUnaligned(!options.isSkipUnalignedAssembly());
 
 			long s = System.currentTimeMillis();
 
