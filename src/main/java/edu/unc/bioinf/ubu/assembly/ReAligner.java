@@ -439,8 +439,8 @@ public class ReAligner {
 				}
 				
 				//TODO: Safer delimiter?  This assumes no ~ in any read
-				String contigReadStr = contigRead.getSAMString();
 				contigRead.setReadString("");
+				String contigReadStr = contigRead.getSAMString();
 				contigReadStr = contigReadStr.replace('\t','~');
 				
 				String contigName = contigRead.getReadName() + "~" + contigReadStr; 
@@ -582,7 +582,9 @@ public class ReAligner {
 
 			} else {
 				cachedContig = read;
-				unalignedReadsBam.addAlignment(orig);
+				if (orig.getReadUnmappedFlag()) {
+					unalignedReadsBam.addAlignment(orig);
+				}
 			}
 		}
 
