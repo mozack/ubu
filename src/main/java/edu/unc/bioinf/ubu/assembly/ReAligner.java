@@ -119,9 +119,11 @@ public class ReAligner {
 //			String finalUnaligned = unalignedDir + "/" + "unaligned_to_contig.bam";
 			
 			if (hasContigs) {
+				String finalUnalignedSam = unalignedDir + "/" + "unaligned_to_contig.bam";
 				processContigs(unalignedContigFasta, unalignedDir, unalignedSam);
 			}
 		}
+		
 		
 		outputReadsBam.close();
 		
@@ -578,13 +580,13 @@ public class ReAligner {
 						
 						outputReadsBam.addAlignment(updatedRead);
 					}
+				} else {
+					if (orig.getReadUnmappedFlag()) {
+						unalignedReadsBam.addAlignment(orig);
+					}
 				}
-
 			} else {
 				cachedContig = read;
-				if (orig.getReadUnmappedFlag()) {
-					unalignedReadsBam.addAlignment(orig);
-				}
 			}
 		}
 
@@ -808,11 +810,19 @@ public class ReAligner {
 		String regions = "/home/lisle/ayc/regions/chr17_261.gtf";
 		String tempDir = "/home/lisle/ayc/sim/sim261/chr17/working";
 */		
+		/*
 		String input = "/home/lmose/dev/ayc/sim/sim261/chr11/sorted.bam";
 		String output = "/home/lmose/dev/ayc/sim/sim261/chr11/realigned.bam";
 		String reference = "/home/lmose/reference/chr11/chr11.fa";
 		String regions = "/home/lmose/dev/ayc/regions/chr11_261.gtf";
 		String tempDir = "/home/lmose/dev/ayc/sim/sim261/chr11/working";
+		*/
+
+		String input = "/home/lmose/dev/ayc/sim/38/sorted_tiny.bam";
+		String output = "/home/lmose/dev/ayc/sim/38/realigned.bam";
+		String reference = "/home/lmose/reference/chr7/chr7.fa";
+		String regions = "/home/lmose/dev/ayc/regions/egfr.gtf";
+		String tempDir = "/home/lmose/dev/ayc/sim/38/working";
 
 
 		
@@ -851,10 +861,10 @@ public class ReAligner {
 		AssemblerSettings settings = new AssemblerSettings();
 		settings.setKmerSize(63);
 		settings.setMinContigLength(100);
-		settings.setMinEdgeFrequency(3);
-		settings.setMinNodeFrequncy(3);
-		settings.setMinEdgeRatio(.02);
-		settings.setMaxPotentialContigs(10000);
+		settings.setMinEdgeFrequency(6);
+		settings.setMinNodeFrequncy(6);
+		settings.setMinEdgeRatio(.05);
+		settings.setMaxPotentialContigs(30000);
 		settings.setMinContigRatio(.3);
 		settings.setMinUniqueReads(1);
 
