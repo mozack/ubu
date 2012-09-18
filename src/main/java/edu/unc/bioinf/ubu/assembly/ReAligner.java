@@ -115,6 +115,8 @@ public class ReAligner {
 			String unalignedContigFasta = unalignedDir + "/unaligned_contigs.fasta";
 			Assembler assem = newUnalignedAssembler();
 			boolean hasContigs = assem.assembleContigs(unalignedSam, unalignedContigFasta, "unaligned");
+			// Make eligible for GC
+			assem = null;
 			
 //			String finalUnaligned = unalignedDir + "/" + "unaligned_to_contig.bam";
 			
@@ -538,6 +540,24 @@ public class ReAligner {
 						if ((origRead.getReadUnmappedFlag()) && (read.getReadNegativeStrandFlag())) {
 							updatedRead.setReadString(reverseComplementor.reverseComplement(updatedRead.getReadString()));
 							updatedRead.setBaseQualityString(reverseComplementor.reverse(updatedRead.getBaseQualityString()));
+						}
+						
+						// If the read's alignment info has been modified, record the original alignment.
+						if (origRead.getReadUnmappedFlag() ||
+							!origRead.getReferenceName().equals(updatedRead.getReferenceName()) ||
+							origRead.getAlignmentStart() != updatedRead.getAlignmentStart() ||
+							origRead.getReadNegativeStrandFlag() != updatedRead.getReadNegativeStrandFlag() ||
+							!origRead.getCigarString().equals(updatedRead.getCigarString())) {
+						
+							String originalAlignment;
+							if (origRead.getReadUnmappedFlag()) {
+								originalAlignment = "N/A";
+							} else {
+								originalAlignment = origRead.getReferenceName() + ":" + origRead.getAlignmentStart() + ":" +
+										(origRead.getReadNegativeStrandFlag() ? "-" : "+") + ":" + origRead.getCigarString();
+							}
+							
+							updatedRead.setAttribute("YO", originalAlignment);
 						}
 						
 						outputReadsBam.addAlignment(updatedRead);
