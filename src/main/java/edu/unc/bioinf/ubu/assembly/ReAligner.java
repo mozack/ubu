@@ -399,21 +399,24 @@ public class ReAligner {
 				
 				String bases = contigRead.getReadString();
 				
-				// Aligned contigs are already expressed in forward strand context
-//				if (contigRead.getReadNegativeStrandFlag()) {
-//					bases = reverseComplementor.reverseComplement(bases);
-//				}
-				
-				//TODO: Safer delimiter?  This assumes no ~ in any read
-				contigRead.setReadString("");
-				String contigReadStr = contigRead.getSAMString();
-				contigReadStr = contigReadStr.replace('\t','~');
-				
-				String contigName = contigRead.getReadName() + "~" + contigReadStr; 
-				
-				writer.append(">" + contigName);
-				writer.append(bases);
-				writer.append("\n");
+				if (bases.length() >= assemblerSettings.getMinContigLength()) {
+					
+					// Aligned contigs are already expressed in forward strand context
+	//				if (contigRead.getReadNegativeStrandFlag()) {
+	//					bases = reverseComplementor.reverseComplement(bases);
+	//				}
+					
+					//TODO: Safer delimiter?  This assumes no ~ in any read
+					contigRead.setReadString("");
+					String contigReadStr = contigRead.getSAMString();
+					contigReadStr = contigReadStr.replace('\t','~');
+					
+					String contigName = contigRead.getReadName() + "~" + contigReadStr; 
+					
+					writer.append(">" + contigName);
+					writer.append(bases);
+					writer.append("\n");
+				}
 			}
 		}
 		contigReader.close();
