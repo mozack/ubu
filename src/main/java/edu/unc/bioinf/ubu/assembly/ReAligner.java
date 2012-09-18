@@ -669,7 +669,7 @@ public class ReAligner {
 		assem.setMinNodeFrequncy(assemblerSettings.getMinNodeFrequncy() * 2);
 		assem.setMinContigLength(assemblerSettings.getMinContigLength());
 		assem.setMinEdgeRatio(assemblerSettings.getMinEdgeRatio() * 2);
-		assem.setMaxPotentialContigs(assemblerSettings.getMaxPotentialContigs() * 20);
+		assem.setMaxPotentialContigs(assemblerSettings.getMaxPotentialContigs() * 30);
 		assem.setMinContigRatio(-1.0);
 		assem.setMinUniqueReads(assemblerSettings.getMinUniqueReads());
 
