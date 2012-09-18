@@ -2,28 +2,24 @@ package edu.unc.bioinf.ubu.assembly;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-
-import net.sf.samtools.SAMRecord;
-
 
 public class Node {
 
-	private String sequence;
+	private Sequence sequence;
 	private int count = 1;
-	private Map<Node, Edge> toEdges = new HashMap<Node, Edge>();
-	private Map<Node, Edge> fromEdges = new HashMap<Node, Edge>();
-	
-	private Set<SAMRecord> startingReads = new HashSet<SAMRecord>();
-	
-	private Set<String> uniqueReadSequences = new HashSet<String>();
+	private Map<Node, Edge> toEdges = new HashMap<Node, Edge>(2);
+	private Map<Node, Edge> fromEdges = new HashMap<Node, Edge>(2);
+	private String contributingRead = null;
+	private boolean hasMultipleUniqueReads = false;
 	
 	public Node(String sequence) {
+		this(new Sequence(sequence));
+	}
+	
+	public Node(Sequence sequence) {
 		this.sequence = sequence;
 	}
 	
@@ -56,16 +52,21 @@ public class Node {
 		return fromEdges.values();
 	}
 	
-	public String getSequence() {
+	public Sequence getSequence() {
 		return sequence;
 	}
 	
-	public void addStartingRead(SAMRecord read) {
-		this.startingReads.add(read);
-	}
-	
 	public void addReadSequence(String sequence) {
-		uniqueReadSequences.add(sequence);
+		if (!hasMultipleUniqueReads) {
+			if (contributingRead == null) {
+				contributingRead = sequence;
+			} else {
+				if (!contributingRead.equals(sequence)) {
+					hasMultipleUniqueReads = true;
+					contributingRead = null;
+				}
+			}
+		}
 	}
 	
 	private void printMultiEdges() {
@@ -135,8 +136,8 @@ public class Node {
 		return frequentEdges;
 	}
 	
-	public int getUniqueReadCount() {
-		return uniqueReadSequences.size();
+	public boolean hasMultipleUniqueReads() {
+		return hasMultipleUniqueReads;
 	}
 	
 	public Edge getMostCommonEdge() {
@@ -194,9 +195,5 @@ public class Node {
 	
 	public void removeFromEdge(Edge edge) {
 		this.fromEdges.remove(edge.getFrom());
-	}
-	
-	public Set<SAMRecord> getStartingReads() {
-		return Collections.unmodifiableSet(startingReads);
 	}
 }

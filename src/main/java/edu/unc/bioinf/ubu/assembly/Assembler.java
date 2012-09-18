@@ -41,7 +41,7 @@ public class Assembler {
 	private int minMergeSize = 25;
 	
 	
-	private Map<String, Node> nodes = new HashMap<String, Node>();
+	private Map<Sequence, Node> nodes = new HashMap<Sequence, Node>();
 	
 	private Set<Node> rootNodes = new HashSet<Node>();
 	
@@ -53,9 +53,7 @@ public class Assembler {
 	
 	private long regionLength;
 	
-	List<SAMRecord> allReads = new ArrayList<SAMRecord>();
-		
-	//TODO: Do not keep contigs or reads in memory.
+	//TODO: Do not keep contigs in memory.
 	public boolean assembleContigs(String inputSam, String output, String prefix) throws FileNotFoundException, IOException {
         SAMFileReader reader = new SAMFileReader(new File(inputSam));
         reader.setValidationStringency(ValidationStringency.SILENT);
@@ -67,17 +65,27 @@ public class Assembler {
 		
 		int numRecs = 0;
 		
+		int count = 0;
+		
 		for (SAMRecord read : reader) {
-			allReads.add(read);
-			addToGraph(read);
-			numRecs++;
 			
-			if (read.getAlignmentStart() < regionStart) {
-				regionStart = read.getAlignmentStart();
+			//TODO: Handle N's
+			if (!read.getReadString().contains("N")) {
+				addToGraph(read);
+				numRecs++;
+				
+				if (read.getAlignmentStart() < regionStart) {
+					regionStart = read.getAlignmentStart();
+				}
+				
+				if (read.getAlignmentEnd() > regionEnd) {
+					regionEnd = read.getAlignmentEnd();
+				}
 			}
 			
-			if (read.getAlignmentEnd() > regionEnd) {
-				regionEnd = read.getAlignmentEnd();
+			count +=1;
+			if ((count % 10000) == 0) {
+				System.out.println("Assembler processed: " + count + " reads.");
 			}
 		}
 		
@@ -149,7 +157,7 @@ public class Assembler {
 		for (Node node : nodes.values()) {
 			if (node.getCount() < minNodeFrequncy) {
 				nodesToFilter.add(node);
-			} else if (node.getUniqueReadCount() < this.minUniqueReads) {
+			} else if (node.hasMultipleUniqueReads()) {
 				nodesToFilter.add(node);
 			}
 		}
@@ -231,19 +239,22 @@ public class Assembler {
 		
 		if (!counts.isTerminatedAtRepeat()) {
 			// We've reached the terminus, append the remainder of the node.
-			contig.append(node, node.getSequence());
+			contig.append(node, node.getSequence().getSequenceAsString());
 		}
 		
-		if ((contig.getSequence().length() >= minContigLength) &&
-			((double) contig.getSequence().length() / (double) regionLength >= minContigRatio)) {
-			contig.setDescriptor(counts.toString());
+		if (contig.getSequence().length() >= minContigLength) {
 			
-			
-			if (counts.isTerminatedAtRepeat()) {
-				contig.setDescriptor(contig.getDescriptor() + "_repeatNode:" + node.getSequence());
+			if ( (minContigRatio > 0) && (regionLength > 0) &&
+				 (((double) contig.getSequence().length() / (double) regionLength) >= minContigRatio) ) {
+				
+				contig.setDescriptor(counts.toString());
+				
+				if (counts.isTerminatedAtRepeat()) {
+					contig.setDescriptor(contig.getDescriptor() + "_repeatNode:" + node.getSequence());
+				}
+				
+				contigs.add(contig);
 			}
-			
-			contigs.add(contig);
 		}
 	}
 	
@@ -276,7 +287,7 @@ public class Assembler {
 
 			} else {
 				// Append current character
-				contig.append(node, Character.toString(node.getSequence().charAt(0)));
+				contig.append(node, Character.toString(node.getSequence().getFirstCharacter()));
 				
 				potentialContigCount += edges.size() - 1;
 				
@@ -369,23 +380,19 @@ public class Assembler {
 	}
 	
 	private void addToGraph(SAMRecord read) {
-		Node node = addToGraph(read.getReadString());
-		
-		if (node != null) {
-			node.addStartingRead(read);
-		}
+		addToGraph(read.getReadString());		
 	}
 	
-	private Node addToGraph(String sequence) {
+	private void addToGraph(String sequence) {
 		Node prev = null;
-		Node firstNode = null;
 		
 		for (int i=0; i<=sequence.length()-kmerSize; i++) {
 			String kmer = sequence.substring(i, i+kmerSize);
-			Node node = nodes.get(kmer);
+			Sequence kmerSequence = new Sequence(kmer);
+			Node node = nodes.get(kmerSequence);
 			if (node == null) {
-				node = new Node(kmer);
-				nodes.put(kmer, node);
+				node = new Node(kmerSequence);
+				nodes.put(kmerSequence, node);
 			} else {
 				node.incrementCount();
 			}
@@ -396,14 +403,8 @@ public class Assembler {
 				prev.addToEdge(node);
 			}
 			
-			if (firstNode == null) {
-				firstNode = node;
-			}
-			
 			prev = node;
 		}
-		
-		return firstNode;
 	}
 	
 	public static void main(String[] args) throws Exception {
@@ -427,7 +428,9 @@ public class Assembler {
 		ayc.setMaxPotentialContigs(30000);
 		ayc.setMinContigRatio(.5);
 		
-		ayc.assembleContigs("/home/lisle/ayc/sim/sim1/chr21/chr21_37236845_37237045.bam", "/home/lisle/ayc/sim/sim1/chr21/1.fasta", "foo");
+//		ayc.assembleContigs("/home/lisle/ayc/sim/sim1/chr21/chr21_37236845_37237045.bam", "/home/lisle/ayc/sim/sim1/chr21/1.fasta", "foo");
+		
+		ayc.assembleContigs("/home/lmose/dev/ayc/sim/38/assem/unaligned_to_contig.bam", "/home/lmose/dev/ayc/sim/38/assem/reads.fasta", "foo"); 
 		
 //		ayc.assemble("/home/lisle/ayc/case0/normal_7576572_7577692.fastq", "/home/lisle/ayc/case0/normal_33_05.fasta");
 //		ayc.assemble("/home/lisle/ayc/case0/tumor_7576572_7577692.fastq", "/home/lisle/ayc/case0/tumor_33_05.fasta");

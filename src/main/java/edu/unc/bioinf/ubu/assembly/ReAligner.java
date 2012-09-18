@@ -113,13 +113,12 @@ public class ReAligner {
 			
 			String unalignedDir = tempDir + "/unaligned";
 			String unalignedContigFasta = unalignedDir + "/unaligned_contigs.fasta";
-			Assembler assem = newAssembler();
+			Assembler assem = newUnalignedAssembler();
 			boolean hasContigs = assem.assembleContigs(unalignedSam, unalignedContigFasta, "unaligned");
 			
 //			String finalUnaligned = unalignedDir + "/" + "unaligned_to_contig.bam";
 			
 			if (hasContigs) {
-				String finalUnalignedSam = unalignedDir + "/" + "unaligned_to_contig.bam";
 				processContigs(unalignedContigFasta, unalignedDir, unalignedSam);
 			}
 		}
@@ -127,35 +126,6 @@ public class ReAligner {
 		
 		outputReadsBam.close();
 		
-		/*
-		log("Aligning contigs");
-		Aligner aligner = new Aligner(reference, numThreads);
-		String contigsSam = tempDir + "/" + "all_contigs.sam";
-		aligner.align(contigFasta, contigsSam);
-		
-		log("Cleaning contigs");
-		String cleanContigsFasta = tempDir + "/" + "clean_contigs.fasta";
-		cleanAndOutputContigs(contigsSam, cleanContigsFasta);
-		
-		log("Aligning original reads to contigs");
-		String alignedToContigSam = tempDir + "/" + "align_to_contig.sam";
-		this.alignToContigs(inputSam, alignedToContigSam, cleanContigsFasta);
-		
-		log("Convert aligned to contig to bam, and sorting bams");
-		String alignedToContigBam = tempDir + "/" + "align_to_contig.bam";
-		String sortedAlignedToContig = tempDir + "/" + "sorted_aligned_to_contig";
-		String sortedOriginalReads = tempDir + "/" + "sorted_original_reads"; 
-		runCommand("samtools view -bS " + alignedToContigSam + " -o " + alignedToContigBam);
-		runCommand("samtools sort -n " + alignedToContigBam + " " + sortedAlignedToContig);
-		runCommand("samtools sort -n " + inputSam + " " + sortedOriginalReads);
-		sortedAlignedToContig += ".bam";
-		sortedOriginalReads += ".bam";
-		
-		log("Adjust reads");
-		String unaligned = tempDir + "/" + "unaligned_reads.bam";
-		adjustReads(sortedOriginalReads, sortedAlignedToContig, unaligned);
-		*/
-
 		System.out.println("Done.");
 	}
 	
@@ -310,19 +280,11 @@ public class ReAligner {
 	public void processRegion(Feature region, String inputSam) throws Exception {
 		
 		try {
-		
-			Set<SAMRecord> updatedReads = new HashSet<SAMRecord>();
 			
 	//		log("Extracting targeted region: " + region.getDescriptor());
 			String targetRegionBam = extractTargetRegion(inputSam, region);
 			
 			String contigsFasta = tempDir + "/" + region.getDescriptor() + "_contigs.fasta";
-			String cleanContigsFasta = tempDir + "/" + region.getDescriptor() + "_clean_contigs.fasta";
-			String contigsSam   = tempDir + "/" + region.getDescriptor() + "_contigs.sam";
-			String outputBam    = tempDir + "/" + region.getDescriptor() + "_output.bam";
-			String targetRegionFastq = tempDir + "/" + region.getDescriptor() + ".fastq";
-			String alignedToContigSam = tempDir + "/" + region.getDescriptor() + "_aligned_to_contig.sam";
-			String unalignedFastq = getUnalignedFastqFile();
 			
 			Assembler assem = newAssembler();
 			
@@ -435,10 +397,10 @@ public class ReAligner {
 				
 				String bases = contigRead.getReadString();
 				
-				// Express contigs in forward strand context
-				if (contigRead.getReadNegativeStrandFlag()) {
-					bases = reverseComplementor.reverseComplement(bases);
-				}
+				// Aligned contigs are already expressed in forward strand context
+//				if (contigRead.getReadNegativeStrandFlag()) {
+//					bases = reverseComplementor.reverseComplement(bases);
+//				}
 				
 				//TODO: Safer delimiter?  This assumes no ~ in any read
 				contigRead.setReadString("");
@@ -698,6 +660,22 @@ public class ReAligner {
 
 		return assem;
 	}
+	
+	private Assembler newUnalignedAssembler() {
+		Assembler assem = new Assembler();
+
+		assem.setKmerSize(assemblerSettings.getKmerSize());
+		assem.setMinEdgeFrequency(assemblerSettings.getMinEdgeFrequency() * 2);
+		assem.setMinNodeFrequncy(assemblerSettings.getMinNodeFrequncy() * 2);
+		assem.setMinContigLength(assemblerSettings.getMinContigLength());
+		assem.setMinEdgeRatio(assemblerSettings.getMinEdgeRatio() * 2);
+		assem.setMaxPotentialContigs(assemblerSettings.getMaxPotentialContigs() * 20);
+		assem.setMinContigRatio(-1.0);
+		assem.setMinUniqueReads(assemblerSettings.getMinUniqueReads());
+
+		return assem;
+	}
+
 
 	private void init() {
 		File workingDir = new File(tempDir);
@@ -810,20 +788,21 @@ public class ReAligner {
 		String regions = "/home/lisle/ayc/regions/chr17_261.gtf";
 		String tempDir = "/home/lisle/ayc/sim/sim261/chr17/working";
 */		
-		/*
+	
 		String input = "/home/lmose/dev/ayc/sim/sim261/chr11/sorted.bam";
 		String output = "/home/lmose/dev/ayc/sim/sim261/chr11/realigned.bam";
 		String reference = "/home/lmose/reference/chr11/chr11.fa";
 		String regions = "/home/lmose/dev/ayc/regions/chr11_261.gtf";
 		String tempDir = "/home/lmose/dev/ayc/sim/sim261/chr11/working";
-		*/
+		
 
+		/*
 		String input = "/home/lmose/dev/ayc/sim/38/sorted_tiny.bam";
 		String output = "/home/lmose/dev/ayc/sim/38/realigned.bam";
 		String reference = "/home/lmose/reference/chr7/chr7.fa";
 		String regions = "/home/lmose/dev/ayc/regions/egfr.gtf";
 		String tempDir = "/home/lmose/dev/ayc/sim/38/working";
-
+*/
 
 		
 /*
