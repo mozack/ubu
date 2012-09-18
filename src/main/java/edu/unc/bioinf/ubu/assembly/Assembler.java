@@ -244,7 +244,8 @@ public class Assembler {
 		
 		if (contig.getSequence().length() >= minContigLength) {
 			
-			if ( (minContigRatio > 0) && (regionLength > 0) &&
+			// Check contig length against region length if mcr is specified and we have a valid region length
+			if ( (minContigRatio <= 0) || (regionLength <= 0) ||
 				 (((double) contig.getSequence().length() / (double) regionLength) >= minContigRatio) ) {
 				
 				contig.setDescriptor(counts.toString());
