@@ -157,7 +157,7 @@ public class Assembler {
 		for (Node node : nodes.values()) {
 			if (node.getCount() < minNodeFrequncy) {
 				nodesToFilter.add(node);
-			} else if (node.hasMultipleUniqueReads()) {
+			} else if (!node.hasMultipleUniqueReads()) {
 				nodesToFilter.add(node);
 			}
 		}
@@ -426,7 +426,7 @@ public class Assembler {
 		ayc.setMinContigLength(100);
 		ayc.setMinEdgeRatio(.015);
 		ayc.setMaxPotentialContigs(30000);
-		ayc.setMinContigRatio(.5);
+		ayc.setMinContigRatio(.2);
 		
 //		ayc.assembleContigs("/home/lisle/ayc/sim/sim1/chr21/chr21_37236845_37237045.bam", "/home/lisle/ayc/sim/sim1/chr21/1.fasta", "foo");
 		
