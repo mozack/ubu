@@ -36,7 +36,7 @@ public class ReAligner {
 
 	private SAMFileHeader samHeader;
 
-	private SAMFileWriter outputReadsBam;
+//	private SAMFileWriter outputReadsBam;
 
 	private long startMillis;
 
@@ -45,6 +45,8 @@ public class ReAligner {
 	private String regionsGtf;
 
 	private String tempDir;
+	
+	private String unalignedRegionSam;
 
 	private String reference;
 	
@@ -88,8 +90,42 @@ public class ReAligner {
 		log("Reading Input SAM Header");
 		getSamHeader(inputSam);
 
-		log("Initializing output SAM File");
-		initOutputFile(outputSam);
+//		log("Initializing output SAM File");
+//		initOutputFile(outputSam);
+		
+		samHeader.setSortOrder(SAMFileHeader.SortOrder.unsorted);
+		
+		if (shouldReprocessUnaligned) {		
+			log("Assembling unaligned reads");
+			
+			String unalignedSam = tempDir + "/unaligned.bam";
+			getUnalignedReads(inputSam, unalignedSam);
+			
+//			String unalignedSam = tempDir + "/" + "unaligned_to_contig.bam";
+			
+			String unalignedDir = tempDir + "/unaligned";
+			String unalignedContigFasta = unalignedDir + "/unaligned_contigs.fasta";
+			unalignedRegionSam = unalignedDir + "/unaligned_region.bam";
+			String sortedUnalignedRegion = unalignedDir + "/sorted_unaligned_region";
+			
+			Assembler assem = newUnalignedAssembler();
+			boolean hasContigs = assem.assembleContigs(unalignedSam, unalignedContigFasta, "unaligned");
+			// Make eligible for GC
+			assem = null;
+			
+//			String finalUnaligned = unalignedDir + "/" + "unaligned_to_contig.bam";
+			
+			if (hasContigs) {
+				processContigs(unalignedContigFasta, unalignedDir, unalignedSam, unalignedRegionSam);
+				runCommand("samtools sort " + unalignedRegionSam + " " + sortedUnalignedRegion);
+				unalignedRegionSam = sortedUnalignedRegion + ".bam";
+				runCommand("samtools index " + unalignedRegionSam);
+				
+
+			} else {
+				shouldReprocessUnaligned = false;
+			}
+		}
 		
 		log("Iterating over regions");
 		for (Feature region : regions) {
@@ -105,33 +141,16 @@ public class ReAligner {
 		String contigFasta = tempDir + "/" + "all_contigs.fasta";
 		combineContigs(contigFasta);
 		
-		processContigs(contigFasta, tempDir, inputSam);
-		
-		if (shouldReprocessUnaligned) {		
-			log("Assembling unaligned reads");
-			String unalignedSam = tempDir + "/" + "unaligned_to_contig.bam";
-			
-			String unalignedDir = tempDir + "/unaligned";
-			String unalignedContigFasta = unalignedDir + "/unaligned_contigs.fasta";
-			Assembler assem = newUnalignedAssembler();
-			boolean hasContigs = assem.assembleContigs(unalignedSam, unalignedContigFasta, "unaligned");
-			// Make eligible for GC
-			assem = null;
-			
-//			String finalUnaligned = unalignedDir + "/" + "unaligned_to_contig.bam";
-			
-			if (hasContigs) {
-				processContigs(unalignedContigFasta, unalignedDir, unalignedSam);
-			}
-		}
-		
-		
-		outputReadsBam.close();
+		processContigs(contigFasta, tempDir, inputSam, outputSam);
 		
 		System.out.println("Done.");
 	}
 	
-	private void processContigs(String contigFasta, String tempDir, String inputSam) throws InterruptedException, IOException {
+	private void processContigs(String contigFasta, String tempDir, String inputSam, String outputSam) throws InterruptedException, IOException {
+		
+		SAMFileWriter outputReadsBam = new SAMFileWriterFactory().makeSAMOrBAMWriter(
+				samHeader, true, new File(outputSam));
+		
 		log("Aligning contigs");
 		Aligner aligner = new Aligner(reference, numThreads);
 		String contigsSam = tempDir + "/" + "all_contigs.sam";
@@ -157,7 +176,13 @@ public class ReAligner {
 		
 		log("Adjust reads");
 		String unaligned = tempDir + "/" + "unaligned_to_contig.bam";
-		adjustReads(sortedOriginalReads, sortedAlignedToContig, unaligned);
+		adjustReads(sortedOriginalReads, sortedAlignedToContig, unaligned, outputReadsBam);
+		
+		outputReadsBam.close();
+	}
+	
+	private void concatenateBams(String bam1, String bam2, String outputBam) throws InterruptedException, IOException {
+		runCommand("samtools cat " + bam1 + " " + bam2 + " -o " + outputBam);
 	}
 	
 	private void combineContigs(String contigFasta) throws IOException, InterruptedException {
@@ -255,8 +280,7 @@ public class ReAligner {
 		}
 	}
 	
-	private void getUnalignedReads(String inputSam) throws InterruptedException, IOException {
-		String unalignedBam = tempDir + "/unaligned.bam";
+	private void getUnalignedReads(String inputSam, String unalignedBam) throws InterruptedException, IOException {
 		String unalignedFastq = getUnalignedFastqFile();
 		
 		String cmd = "samtools view -b -f 0x04 " + inputSam + " -o " + unalignedBam;
@@ -284,7 +308,16 @@ public class ReAligner {
 		try {
 			
 	//		log("Extracting targeted region: " + region.getDescriptor());
-			String targetRegionBam = extractTargetRegion(inputSam, region);
+			String targetRegionBam = extractTargetRegion(inputSam, region, "");
+			
+			if (this.shouldReprocessUnaligned) {
+				String unalignedTargetRegionBam = extractTargetRegion(unalignedRegionSam, region, "unaligned_");
+				
+				String combinedBam = targetRegionBam.replace(tempDir + "/", tempDir + "/" + "combined_");
+//				String combinedBam = "combined_" + targetRegionBam;
+				concatenateBams(targetRegionBam, unalignedTargetRegionBam, combinedBam);
+				targetRegionBam = combinedBam;
+			}
 			
 			String contigsFasta = tempDir + "/" + region.getDescriptor() + "_contigs.fasta";
 			
@@ -298,9 +331,9 @@ public class ReAligner {
 		}
 	}
 
-	private String extractTargetRegion(String inputSam, Feature region)
+	private String extractTargetRegion(String inputSam, Feature region, String prefix)
 			throws IOException, InterruptedException {
-		String extractFile = tempDir + "/" + region.getDescriptor() + ".bam";
+		String extractFile = tempDir + "/" + prefix + region.getDescriptor() + ".bam";
 
 		String location = region.getSeqname() + ":" + region.getStart() + "-"
 				+ region.getEnd();
@@ -477,7 +510,7 @@ public class ReAligner {
 		contigAligner.shortAlign(fastq, alignedToContigSam);
 	}
 	
-	private void adjustReads(String originalReadsSam, String alignedToContigSam, String unalignedSam) throws IOException {
+	private void adjustReads(String originalReadsSam, String alignedToContigSam, String unalignedSam, SAMFileWriter outputReadsBam) throws IOException {
 		
 		SAMFileWriter unalignedReadsBam = new SAMFileWriterFactory().makeSAMOrBAMWriter(
 				samHeader, true, new File(unalignedSam));
@@ -661,12 +694,14 @@ public class ReAligner {
 		}
 	}
 
+	/*
 	private void initOutputFile(String outputReadsBamFilename) {
 		samHeader.setSortOrder(SAMFileHeader.SortOrder.unsorted);
 
 		outputReadsBam = new SAMFileWriterFactory().makeSAMOrBAMWriter(
 				samHeader, true, new File(outputReadsBamFilename));
 	}
+	*/
 		
 	private Assembler newAssembler() {
 		Assembler assem = new Assembler();
