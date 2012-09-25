@@ -86,6 +86,14 @@ public class Assembler {
 			count +=1;
 			if ((count % 10000) == 0) {
 				System.out.println("Assembler processed: " + count + " reads.");
+				
+//				if (count == 100000) {
+//					try {
+//						Thread.sleep(10000000);
+//					} catch (InterruptedException e) {
+//						e.printStackTrace();
+//					}
+//				}
 			}
 		}
 		
@@ -265,7 +273,7 @@ public class Assembler {
 	
 	private void buildContig(Node node, Set<Node> visitedNodes, Contig contig, Counts counts, int depth) {
 		
-		if (depth > 5000) {
+		if (depth > 10000) {
 			throw new DepthExceededException(depth);
 		}
 		
