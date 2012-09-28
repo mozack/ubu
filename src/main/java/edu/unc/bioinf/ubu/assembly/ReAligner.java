@@ -103,7 +103,7 @@ public class ReAligner {
 			log("Assembling unaligned reads");
 			
 			String unalignedSam = tempDir + "/unaligned.bam";
-			getUnalignedReads(inputSam, unalignedSam);
+			unalignedSam = getUnalignedReads(inputSam, unalignedSam);
 			
 //			String unalignedSam = tempDir + "/" + "unaligned_to_contig.bam";
 			
@@ -311,16 +311,18 @@ public class ReAligner {
 	}
 	
 	private void downsampleSam(String sam, String downsampledSam, double keepProbability) {
+		System.out.println("keepProbability: " + keepProbability);
+		
 		SAMFileReader reader = new SAMFileReader(new File(sam));
 		reader.setValidationStringency(ValidationStringency.SILENT);
 		
 		SAMFileWriter downsampleOutput = new SAMFileWriterFactory().makeSAMOrBAMWriter(
 				samHeader, true, new File(downsampledSam));
 
+		Random random = new Random(RANDOM_SEED);
 		int downsampleCount = 0;
 		
 		for (SAMRecord read : reader) {
-			Random random = new Random(RANDOM_SEED);
 			if (random.nextDouble() < keepProbability) {
 				downsampleOutput.addAlignment(read);
 				downsampleCount += 1;
@@ -333,8 +335,8 @@ public class ReAligner {
 		System.out.println("Downsampled to: " + downsampleCount);
 	}
 	
-	private void getUnalignedReads(String inputSam, String unalignedBam) throws InterruptedException, IOException {
-		String unalignedFastq = getUnalignedFastqFile();
+	private String getUnalignedReads(String inputSam, String unalignedBam) throws InterruptedException, IOException {
+//		String unalignedFastq = getUnalignedFastqFile();
 		
 		String cmd = "samtools view -b -f 0x04 " + inputSam + " -o " + unalignedBam;
 		runCommand(cmd);
@@ -350,12 +352,14 @@ public class ReAligner {
 			unalignedBam = downsampledSam;
 		}
 		
-		sam2Fastq(unalignedBam, unalignedFastq);		
+		return unalignedBam;
+		
+//		sam2Fastq(unalignedBam, unalignedFastq);		
 	}
 	
-	private String getUnalignedFastqFile() {
-		return tempDir + "/unaligned.fastq";
-	}
+//	private String getUnalignedFastqFile() {
+//		return tempDir + "/unaligned.fastq";
+//	}
 
 	public void processRegion(Feature region, String inputSam) throws Exception {
 		
@@ -879,7 +883,7 @@ public class ReAligner {
 			System.out.println("Elapsed seconds: " + (e - s) / 1000);
 		}
 	}
-
+	
 	public static void main(String[] args) throws Exception {
 		ReAligner realigner = new ReAligner();
 
