@@ -53,6 +53,8 @@ public class Assembler {
 	
 	private long regionLength;
 	
+	private boolean hasRepeat = false;
+	
 	//TODO: Do not keep contigs in memory.
 	public boolean assembleContigs(String inputSam, String output, String prefix) throws FileNotFoundException, IOException {
         SAMFileReader reader = new SAMFileReader(new File(inputSam));
@@ -114,15 +116,19 @@ public class Assembler {
 	//		mergeContigs();
 			outputContigs(prefix);
 		} catch (DepthExceededException e) {
-			System.out.println("DEPTH EXCEEDED for : " + inputSam);
+			System.out.println("DEPTH_EXCEEDED for : " + inputSam);
 			contigs.clear();
 		} catch (TooManyPotentialContigsException e) {
-			System.out.println("TOO MANY CONTIGS for : " + inputSam);
+			System.out.println("TOO_MANY_CONTIGS for : " + inputSam);
 			contigs.clear();
 		}
 		
 		writer.close();
 		reader.close();
+		
+		if (hasRepeat) {
+			System.out.println("REPEATING_NODE for : " + inputSam);
+		}
 		
 		return contigs.size() > 0;
 	}
