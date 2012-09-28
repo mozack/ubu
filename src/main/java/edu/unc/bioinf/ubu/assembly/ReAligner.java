@@ -15,6 +15,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 import net.sf.samtools.Cigar;
@@ -34,6 +35,9 @@ import edu.unc.bioinf.ubu.sam.ReverseComplementor;
 
 public class ReAligner {
 
+	private static final int MAX_UNALIGNED_READS = 1000000;
+	private static final long RANDOM_SEED = 1;
+	
 	private SAMFileHeader samHeader;
 
 //	private SAMFileWriter outputReadsBam;
@@ -64,7 +68,7 @@ public class ReAligner {
 	
 	private List<ReAlignerRunnable> threads = new ArrayList<ReAlignerRunnable>();
 	
-	private List<SAMRecord> unalignedReads = new ArrayList<SAMRecord>();
+//	private List<SAMRecord> unalignedReads = new ArrayList<SAMRecord>();
 	
 	private ReverseComplementor reverseComplementor = new ReverseComplementor();
 	
@@ -186,11 +190,22 @@ public class ReAligner {
 	}
 	
 	private void combineContigs(String contigFasta) throws IOException, InterruptedException {
+
+		StringBuffer files = new StringBuffer();
 		
 		for (Feature region : regions) {
 			String regionContigsFasta = tempDir + "/" + region.getDescriptor() + "_contigs.fasta";
-			appendFile(regionContigsFasta, contigFasta);
+			files.append(" " + regionContigsFasta);
 		}
+		
+		String[] cmd = new String[] { "bash", "-c", "cat " + files.toString() + " >> " + contigFasta };
+		
+		runCommand(cmd);
+		
+//		for (Feature region : regions) {
+//			String regionContigsFasta = tempDir + "/" + region.getDescriptor() + "_contigs.fasta";
+//			appendFile(regionContigsFasta, contigFasta);
+//		}
 	}
 	
 	public synchronized void addThread(ReAlignerRunnable thread) {
@@ -280,23 +295,62 @@ public class ReAligner {
 		}
 	}
 	
+	private int countReads(String sam) {
+		int count = 0;
+		
+		SAMFileReader reader = new SAMFileReader(new File(sam));
+		reader.setValidationStringency(ValidationStringency.SILENT);
+
+		for (SAMRecord read : reader) {
+			count += 1;
+		}
+		
+		reader.close();
+		
+		return count;
+	}
+	
+	private void downsampleSam(String sam, String downsampledSam, double keepProbability) {
+		SAMFileReader reader = new SAMFileReader(new File(sam));
+		reader.setValidationStringency(ValidationStringency.SILENT);
+		
+		SAMFileWriter downsampleOutput = new SAMFileWriterFactory().makeSAMOrBAMWriter(
+				samHeader, true, new File(downsampledSam));
+
+		int downsampleCount = 0;
+		
+		for (SAMRecord read : reader) {
+			Random random = new Random(RANDOM_SEED);
+			if (random.nextDouble() < keepProbability) {
+				downsampleOutput.addAlignment(read);
+				downsampleCount += 1;
+			}
+		}
+		
+		downsampleOutput.close();
+		reader.close();
+		
+		System.out.println("Downsampled to: " + downsampleCount);
+	}
+	
 	private void getUnalignedReads(String inputSam, String unalignedBam) throws InterruptedException, IOException {
 		String unalignedFastq = getUnalignedFastqFile();
 		
 		String cmd = "samtools view -b -f 0x04 " + inputSam + " -o " + unalignedBam;
 		runCommand(cmd);
 		
-		sam2Fastq(unalignedBam, unalignedFastq);
+		int numUnalignedReads = countReads(unalignedBam);
 		
-		SAMFileReader reader = new SAMFileReader(new File(unalignedBam));
-		reader.setValidationStringency(ValidationStringency.SILENT);
+		System.out.println("Number of unaligned reads: " + numUnalignedReads);
 		
-		for (SAMRecord read : reader) {
-			if (read.getReadUnmappedFlag()) {
-				unalignedReads.add(read);
-			}
+		if (numUnalignedReads > MAX_UNALIGNED_READS) {
+			double keepProbability = (double)  MAX_UNALIGNED_READS / (double) numUnalignedReads;
+			String downsampledSam = unalignedBam + ".downsampled.bam";
+			downsampleSam(unalignedBam, downsampledSam, keepProbability);
+			unalignedBam = downsampledSam;
 		}
-		reader.close();
+		
+		sam2Fastq(unalignedBam, unalignedFastq);		
 	}
 	
 	private String getUnalignedFastqFile() {
