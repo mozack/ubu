@@ -47,7 +47,7 @@ public class Aligner {
 		
 		runCommand(aln);
 		
-		String convert = "bwa samse " + reference + " " + sai + " " + input + " -f " + outputSam;
+		String convert = "bwa samse " + reference + " " + sai + " " + input + " -f " + outputSam  + " -n 100";
 		
 		runCommand(convert);
 	}
