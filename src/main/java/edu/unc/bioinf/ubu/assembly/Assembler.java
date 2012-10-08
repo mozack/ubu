@@ -55,6 +55,8 @@ public class Assembler {
 	
 	private boolean hasRepeat = false;
 	
+	int outputCount = 0;
+	
 	//TODO: Do not keep contigs in memory.
 	public boolean assembleContigs(String inputSam, String output, String prefix) throws FileNotFoundException, IOException {
         SAMFileReader reader = new SAMFileReader(new File(inputSam));
@@ -112,9 +114,9 @@ public class Assembler {
 		identifyRootNodes();
 		
 		try {
-			buildContigs();
+			buildContigs(prefix);
 	//		mergeContigs();
-			outputContigs(prefix);
+//			outputContigs(prefix);
 		} catch (DepthExceededException e) {
 			System.out.println("DEPTH_EXCEEDED for : " + inputSam);
 			contigs.clear();
@@ -213,16 +215,20 @@ public class Assembler {
 	
 	private void outputContigs(String prefix) throws IOException {
 		
-		System.out.println("Writing " + contigs.size() + " contigs.");
-		
-		int count = 0;
+//		System.out.println("Writing " + contigs.size() + " contigs.");
 		
 		for (Contig contig : contigs) {
-			contig.setDescriptor(prefix + "_" + count++ + "_" + contig.getDescriptor());
-			writer.append(">" + contig.getDescriptor() + "\n");
-			writer.append(contig.getSequence());
-			writer.append("\n");
+			outputContig(contig, prefix);
 		}
+		
+		contigs.clear();
+	}
+	
+	private void outputContig(Contig contig, String prefix) throws IOException {
+		contig.setDescriptor(prefix + "_" + outputCount++ + "_" + contig.getDescriptor());
+		writer.append(">" + contig.getDescriptor() + "\n");
+		writer.append(contig.getSequence());
+		writer.append("\n");		
 	}
 	
 	private void identifyRootNodes() {
@@ -233,7 +239,7 @@ public class Assembler {
 		}
 	}
 	
-	private void buildContigs() {
+	private void buildContigs(String prefix) throws IOException {
 		System.out.println("Num root nodes: " + rootNodes.size());
 		
 		potentialContigCount = rootNodes.size();
@@ -244,9 +250,13 @@ public class Assembler {
 			Set<Node> visitedNodes = new HashSet<Node>();
 			Counts counts = new Counts();
 			buildContig(node, visitedNodes, contig, counts);
+			
+			//TODO: Check for repeat and discard contigs if encountered
+			outputContigs(prefix);
 		}
 		
 		System.out.println("Potential contig count: " + potentialContigCount);
+		System.out.println("Wrote: " + outputCount + " contigs.");
 	}
 	
 	private void processContigTerminus(Node node, Counts counts, Contig contig) {
@@ -440,12 +450,12 @@ public class Assembler {
 		ayc.setMinNodeFrequncy(3);
 		ayc.setMinContigLength(100);
 		ayc.setMinEdgeRatio(.015);
-		ayc.setMaxPotentialContigs(30000);
+		ayc.setMaxPotentialContigs(100000);
 		ayc.setMinContigRatio(.2);
 		
 //		ayc.assembleContigs("/home/lisle/ayc/sim/sim1/chr21/chr21_37236845_37237045.bam", "/home/lisle/ayc/sim/sim1/chr21/1.fasta", "foo");
 		
-		ayc.assembleContigs("/home/lmose/dev/ayc/sim/38/assem/unaligned_to_contig.bam", "/home/lmose/dev/ayc/sim/38/assem/reads.fasta", "foo"); 
+		ayc.assembleContigs("/home/lmose/dev/ayc/sim/38/assem/3.bam", "/home/lmose/dev/ayc/sim/38/assem/reads.fasta", "foo"); 
 		
 //		ayc.assemble("/home/lisle/ayc/case0/normal_7576572_7577692.fastq", "/home/lisle/ayc/case0/normal_33_05.fasta");
 //		ayc.assemble("/home/lisle/ayc/case0/tumor_7576572_7577692.fastq", "/home/lisle/ayc/case0/tumor_33_05.fasta");
