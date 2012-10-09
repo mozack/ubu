@@ -1,5 +1,7 @@
 package edu.unc.bioinf.ubu.assembly;
 
+import static edu.unc.bioinf.ubu.assembly.OperatingSystemCommand.runCommand;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -40,7 +42,6 @@ public class Assembler {
 	
 	private int minMergeSize = 25;
 	
-	
 	private Map<Sequence, Node> nodes = new HashMap<Sequence, Node>();
 	
 	private Set<Node> rootNodes = new HashSet<Node>();
@@ -58,11 +59,9 @@ public class Assembler {
 	int outputCount = 0;
 	
 	//TODO: Do not keep contigs in memory.
-	public boolean assembleContigs(String inputSam, String output, String prefix) throws FileNotFoundException, IOException {
+	public boolean assembleContigs(String inputSam, String output, String prefix) throws FileNotFoundException, IOException, InterruptedException {
         SAMFileReader reader = new SAMFileReader(new File(inputSam));
         reader.setValidationStringency(ValidationStringency.SILENT);
-
-		writer = new BufferedWriter(new FileWriter(output, false));
 		
 		long regionStart = Long.MAX_VALUE;
 		long regionEnd   = -1;
@@ -71,10 +70,15 @@ public class Assembler {
 		
 		int count = 0;
 		
+		int ambiguousCount = 0;
+		
 		for (SAMRecord read : reader) {
 			
-			//TODO: Handle N's
-			if (!read.getReadString().contains("N")) {
+			boolean hasAmbiguousBases = read.getReadString().contains("N");
+			Integer numBestHits = (Integer) read.getIntegerAttribute("X0");
+			boolean hasAmbiguousInitialAlignment = numBestHits != null && numBestHits > 1;
+			
+			if (!hasAmbiguousBases && !hasAmbiguousInitialAlignment) {
 				addToGraph(read);
 				numRecs++;
 				
@@ -85,11 +89,13 @@ public class Assembler {
 				if (read.getAlignmentEnd() > regionEnd) {
 					regionEnd = read.getAlignmentEnd();
 				}
+			} else {
+				ambiguousCount += 1;
 			}
 			
 			count +=1;
 			if ((count % 10000) == 0) {
-				System.out.println("Assembler processed: " + count + " reads.");
+				System.out.println(prefix + " - Assembler processed: " + count + " reads.");
 				
 //				if (count == 100000) {
 //					try {
@@ -100,6 +106,9 @@ public class Assembler {
 //				}
 			}
 		}
+		
+		System.out.println("Assembler processed: " + count + " reads, skipping: " + 
+				ambiguousCount + " ambiguous reads.");
 		
 		regionLength = regionEnd - regionStart;
 		
@@ -113,6 +122,10 @@ public class Assembler {
 		
 		identifyRootNodes();
 		
+		boolean shouldTruncateOutput = false;
+		
+		writer = new BufferedWriter(new FileWriter(output, false));
+		
 		try {
 			buildContigs(prefix);
 	//		mergeContigs();
@@ -120,19 +133,32 @@ public class Assembler {
 		} catch (DepthExceededException e) {
 			System.out.println("DEPTH_EXCEEDED for : " + inputSam);
 			contigs.clear();
+			shouldTruncateOutput = true;
 		} catch (TooManyPotentialContigsException e) {
 			System.out.println("TOO_MANY_CONTIGS for : " + inputSam);
 			contigs.clear();
+			shouldTruncateOutput = true;
+		} finally {
+			writer.close();
+			reader.close();
 		}
-		
-		writer.close();
-		reader.close();
 		
 		if (hasRepeat) {
 			System.out.println("REPEATING_NODE for : " + inputSam);
+//			shouldTruncateOutput = true;
+		}
+		
+		if (shouldTruncateOutput) {
+			// truncate the contig file
+			truncateFile(output);
 		}
 		
 		return contigs.size() > 0;
+	}
+	
+	private void truncateFile(String file) throws InterruptedException, IOException {
+		runCommand("rm " + file);
+		runCommand("touch " + file);
 	}
 	
 	public void setKmerSize(int kmerSize) {
@@ -264,6 +290,7 @@ public class Assembler {
 		if (!counts.isTerminatedAtRepeat()) {
 			// We've reached the terminus, append the remainder of the node.
 			contig.append(node, node.getSequence().getSequenceAsString());
+			hasRepeat = true;
 		}
 		
 		if (contig.getSequence().length() >= minContigLength) {
@@ -455,7 +482,9 @@ public class Assembler {
 		
 //		ayc.assembleContigs("/home/lisle/ayc/sim/sim1/chr21/chr21_37236845_37237045.bam", "/home/lisle/ayc/sim/sim1/chr21/1.fasta", "foo");
 		
-		ayc.assembleContigs("/home/lmose/dev/ayc/sim/38/assem/3.bam", "/home/lmose/dev/ayc/sim/38/assem/reads.fasta", "foo"); 
+		ayc.assembleContigs("/home/lmose/dev/ayc/sim/sim261/assem/chr1_6161649_6165689.bam", "/home/lmose/dev/ayc/sim/sim261/assem/chr1_6161649_6165689.fasta", "foo");
+		
+//		ayc.assembleContigs("/home/lmose/dev/ayc/sim/38/assem/3.bam", "/home/lmose/dev/ayc/sim/38/assem/reads.fasta", "foo"); 
 		
 //		ayc.assemble("/home/lisle/ayc/case0/normal_7576572_7577692.fastq", "/home/lisle/ayc/case0/normal_33_05.fasta");
 //		ayc.assemble("/home/lisle/ayc/case0/tumor_7576572_7577692.fastq", "/home/lisle/ayc/case0/tumor_33_05.fasta");
