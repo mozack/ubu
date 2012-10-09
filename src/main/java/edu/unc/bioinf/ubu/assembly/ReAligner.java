@@ -1,5 +1,7 @@
 package edu.unc.bioinf.ubu.assembly;
 
+import static edu.unc.bioinf.ubu.assembly.OperatingSystemCommand.runCommand;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -37,6 +39,8 @@ public class ReAligner {
 
 	private static final int MAX_UNALIGNED_READS = 1000000;
 	private static final long RANDOM_SEED = 1;
+	
+	private int missingXATag = 0;
 	
 	private SAMFileHeader samHeader;
 
@@ -147,6 +151,8 @@ public class ReAligner {
 		
 		processContigs(contigFasta, tempDir, inputSam, outputSam);
 		
+		System.out.println("Multiple best hit reads missing XA tag: " + this.missingXATag);
+		
 		System.out.println("Done.");
 	}
 	
@@ -191,21 +197,21 @@ public class ReAligner {
 	
 	private void combineContigs(String contigFasta) throws IOException, InterruptedException {
 
-		StringBuffer files = new StringBuffer();
+//		StringBuffer files = new StringBuffer();
+//		
+//		for (Feature region : regions) {
+//			String regionContigsFasta = tempDir + "/" + region.getDescriptor() + "_contigs.fasta";
+//			files.append(" " + regionContigsFasta);
+//		}
+//		
+//		String[] cmd = new String[] { "bash", "-c", "cat " + files.toString() + " >> " + contigFasta };
+//		
+//		runCommand(cmd);
 		
 		for (Feature region : regions) {
 			String regionContigsFasta = tempDir + "/" + region.getDescriptor() + "_contigs.fasta";
-			files.append(" " + regionContigsFasta);
+			appendFile(regionContigsFasta, contigFasta);
 		}
-		
-		String[] cmd = new String[] { "bash", "-c", "cat " + files.toString() + " >> " + contigFasta };
-		
-		runCommand(cmd);
-		
-//		for (Feature region : regions) {
-//			String regionContigsFasta = tempDir + "/" + region.getDescriptor() + "_contigs.fasta";
-//			appendFile(regionContigsFasta, contigFasta);
-//		}
 	}
 	
 	public synchronized void addThread(ReAlignerRunnable thread) {
@@ -244,56 +250,6 @@ public class ReAligner {
 		new Thread(thread).start();
 	}
 	
-	//TODO: Factor out, and use where appropriate
-	private void runCommand(String cmd) throws IOException, InterruptedException {
-		
-		//String cmd = "bwa bwasw -f " + outputSam + " " + reference + " " + input;
-		System.out.println("Running: [" + cmd + "]");
-		
-		long s = System.currentTimeMillis();
-		
-		Process proc = Runtime.getRuntime().exec(cmd);
-		
-		//TODO: Catch InterruptedException ?
-		//TODO: Capture stderr
-		int ret = proc.waitFor();
-		
-		long e = System.currentTimeMillis();
-		
-		System.out.println("cmd time: " + (e-s)/1000 + " seconds.");
-		
-		if (ret != 0) {
-			throw new RuntimeException("cmd exited with non-zero return code : [" + ret + "] for command: [" + cmd + "]");
-		}
-	}
-
-	private void runCommand(String[] cmd) throws IOException, InterruptedException {
-		
-		//String cmd = "bwa bwasw -f " + outputSam + " " + reference + " " + input;
-		StringBuffer cmdStr = new StringBuffer();
-		for (String substring : cmd) {
-			cmdStr.append(substring);
-			cmdStr.append(" ");
-		}
-		
-		System.out.println("Running: [" + cmdStr + "]");
-		
-		long s = System.currentTimeMillis();
-		
-		Process proc = Runtime.getRuntime().exec(cmd);
-		
-		//TODO: Catch InterruptedException ?
-		//TODO: Capture stderr
-		int ret = proc.waitFor();
-		
-		long e = System.currentTimeMillis();
-		
-		System.out.println("cmd time: " + (e-s)/1000 + " seconds.");
-		
-		if (ret != 0) {
-			throw new RuntimeException("cmd exited with non-zero return code : [" + ret + "] for command: [" + cmd + "]");
-		}
-	}
 	
 	private int countReads(String sam) {
 		int count = 0;
@@ -568,6 +524,67 @@ public class ReAligner {
 		contigAligner.shortAlign(fastq, alignedToContigSam);
 	}
 	
+	static class Pair<T, Y> {
+		private T t;
+		private Y y;
+		public Pair(T t, Y y) {
+			this.t = t;
+			this.y = y;
+		}
+		
+		public T getFirst() {
+			return t;
+		}
+		
+		public Y getSecond() {
+			return y;
+		}
+	}
+	
+	static class HitInfo {
+		private SAMRecord record;
+		private int position;
+		private char strand;
+		private int mismatches;
+		
+		public HitInfo(SAMRecord record, int position, char strand, int mismatches) {
+			this.record = record;
+			this.position = position;
+			this.strand = strand;
+			this.mismatches = mismatches;
+		}
+
+		public SAMRecord getRecord() {
+			return record;
+		}
+
+		public int getPosition() {
+			return position;
+		}
+
+		public char getStrand() {
+			return strand;
+		}
+		
+		public boolean isOnNegativeStrand() {
+			return strand == '-';
+		}
+		
+		public int getNumMismatches() {
+			return mismatches;
+		}
+	}
+	
+	private int getIntAttribute(SAMRecord read, String attribute) {
+		Integer num = read.getIntegerAttribute(attribute);
+		
+		if (num == null) {
+			return 0;
+		} else {
+			return num;
+		}
+	}
+	
 	private void adjustReads(String originalReadsSam, String alignedToContigSam, String unalignedSam, SAMFileWriter outputReadsBam) throws IOException {
 		
 		SAMFileWriter unalignedReadsBam = new SAMFileWriterFactory().makeSAMOrBAMWriter(
@@ -603,58 +620,122 @@ public class ReAligner {
 				
 					SAMRecord origRead = orig;
 					String contigReadStr = read.getReferenceName();
+					
+					
+					// Get alternate best hits
+					List<HitInfo> bestHits = new ArrayList<HitInfo>();
+
 					contigReadStr = contigReadStr.substring(contigReadStr.indexOf('~')+1);
 					contigReadStr = contigReadStr.replace('~', '\t');
 					SAMRecord contigRead = samStringReader.getRead(contigReadStr);
+					
+					HitInfo hit = new HitInfo(contigRead, read.getAlignmentStart(),
+							read.getReadNegativeStrandFlag() ? '-' : '+', getIntAttribute(read, "XM"));
+					
+					bestHits.add(hit);
+					
+					int numBestHits = getIntAttribute(read, "X0");
+					int subOptimalHits = getIntAttribute(read, "X1");
+					
+					int totalHits = numBestHits + subOptimalHits;
+					
+					//TODO: If too many best hits, what to do?
+					
+					if ((totalHits > 1) && (totalHits < 1000)) {
+						// Look in XA tag.
+						String alternateHitsStr = (String) read.getAttribute("XA");
+						if (alternateHitsStr == null) {
+							String msg = "best hits = " + numBestHits + ", but no XA entry for: " + read.getSAMString();
+							System.out.println(msg);							
+							this.missingXATag += 1;
+						} else {
+							
+							String[] alternates = alternateHitsStr.split(";");
+							for (int i=0; i<alternates.length-1; i++) {
+								String[] altInfo = alternates[i].split(",");
+								String altContigReadStr = altInfo[0];
+								char strand = altInfo[1].charAt(0);
+								int position = Integer.parseInt(altInfo[1].substring(1));
+								String cigar = altInfo[2];
+								int mismatches = Integer.parseInt(altInfo[3]);
+								
+								if (cigar.equals("100M")) {
+									altContigReadStr = altContigReadStr.substring(altContigReadStr.indexOf('~')+1);
+									altContigReadStr = altContigReadStr.replace('~', '\t');
+									contigRead = samStringReader.getRead(altContigReadStr);
+									
+									hit = new HitInfo(contigRead, position, strand, mismatches);
+									bestHits.add(hit);
+								}
+							}
+						}
+					}
+					
+					for (HitInfo hitInfo : bestHits) {
+						
+						contigRead = hitInfo.getRecord();
+						int position = hitInfo.getPosition() - 1;
 
-					List<ReadBlock> contigReadBlocks = ReadBlock.getReadBlocks(contigRead);
-					
-					ReadPosition readPosition = new ReadPosition(origRead, read.getAlignmentStart()-1, -1);
-					SAMRecord updatedRead = updateReadAlignment(contigRead,
-							contigReadBlocks, readPosition);
-					
-					if (updatedRead != null) {
-						//TODO: Move into updateReadAlignment ?
-						if (updatedRead.getMappingQuality() == 0) {
-							updatedRead.setMappingQuality(1);
-						}
+						List<ReadBlock> contigReadBlocks = ReadBlock.getReadBlocks(contigRead);
 						
-						if (updatedRead.getReadUnmappedFlag()) {
-							updatedRead.setReadUnmappedFlag(false);
-						}
+						ReadPosition readPosition = new ReadPosition(origRead, position, -1);
+						SAMRecord updatedRead = updateReadAlignment(contigRead,
+								contigReadBlocks, readPosition);
 						
-						updatedRead.setReadNegativeStrandFlag(read.getReadNegativeStrandFlag());
-						
-						// Reverse complement / reverse original read bases and qualities if
-						// the original read was unmapped and is now on the reverse strand
-						// Originally mapped reads would already be expressed in forward strand context
-						// TODO: Do we need to handle forward / reverse strand change.  Is this even possible?
-						// TODO: What about reads that align across chromosomes and are tagged as unmapped
-						//       Might they already be reverse complemented?
-						if ((origRead.getReadUnmappedFlag()) && (read.getReadNegativeStrandFlag())) {
-							updatedRead.setReadString(reverseComplementor.reverseComplement(updatedRead.getReadString()));
-							updatedRead.setBaseQualityString(reverseComplementor.reverse(updatedRead.getBaseQualityString()));
-						}
-						
-						// If the read's alignment info has been modified, record the original alignment.
-						if (origRead.getReadUnmappedFlag() ||
-							!origRead.getReferenceName().equals(updatedRead.getReferenceName()) ||
-							origRead.getAlignmentStart() != updatedRead.getAlignmentStart() ||
-							origRead.getReadNegativeStrandFlag() != updatedRead.getReadNegativeStrandFlag() ||
-							!origRead.getCigarString().equals(updatedRead.getCigarString())) {
-						
-							String originalAlignment;
-							if (origRead.getReadUnmappedFlag()) {
-								originalAlignment = "N/A";
-							} else {
-								originalAlignment = origRead.getReferenceName() + ":" + origRead.getAlignmentStart() + ":" +
-										(origRead.getReadNegativeStrandFlag() ? "-" : "+") + ":" + origRead.getCigarString();
+						if (updatedRead != null) {
+							//TODO: Move into updateReadAlignment ?
+							if (updatedRead.getMappingQuality() == 0) {
+								updatedRead.setMappingQuality(1);
 							}
 							
-							updatedRead.setAttribute("YO", originalAlignment);
+							if (updatedRead.getReadUnmappedFlag()) {
+								updatedRead.setReadUnmappedFlag(false);
+							}
+							
+							updatedRead.setReadNegativeStrandFlag(hitInfo.isOnNegativeStrand());
+							
+							// Reverse complement / reverse original read bases and qualities if
+							// the original read was unmapped and is now on the reverse strand
+							// Originally mapped reads would already be expressed in forward strand context
+							// TODO: Do we need to handle forward / reverse strand change.  Is this even possible?
+							// TODO: What about reads that align across chromosomes and are tagged as unmapped
+							//       Might they already be reverse complemented?
+							if ((origRead.getReadUnmappedFlag()) && (hitInfo.isOnNegativeStrand())) {
+								updatedRead.setReadString(reverseComplementor.reverseComplement(updatedRead.getReadString()));
+								updatedRead.setBaseQualityString(reverseComplementor.reverse(updatedRead.getBaseQualityString()));
+							}
+							
+							// If the read's alignment info has been modified, record the original alignment.
+							if (origRead.getReadUnmappedFlag() ||
+								!origRead.getReferenceName().equals(updatedRead.getReferenceName()) ||
+								origRead.getAlignmentStart() != updatedRead.getAlignmentStart() ||
+								origRead.getReadNegativeStrandFlag() != updatedRead.getReadNegativeStrandFlag() ||
+								!origRead.getCigarString().equals(updatedRead.getCigarString())) {
+							
+								String originalAlignment;
+								if (origRead.getReadUnmappedFlag()) {
+									originalAlignment = "N/A";
+								} else {
+									originalAlignment = origRead.getReferenceName() + ":" + origRead.getAlignmentStart() + ":" +
+											(origRead.getReadNegativeStrandFlag() ? "-" : "+") + ":" + origRead.getCigarString();
+								}
+								
+								// Read's original alignment position
+								updatedRead.setAttribute("YO", originalAlignment);
+							}
+							
+							// Mismatches to the contig
+							updatedRead.setAttribute("YM", hitInfo.getNumMismatches());
+							
+							// Contig's mapping quality
+							updatedRead.setAttribute("YC", hitInfo.getRecord().getMappingQuality());
+							
+							if ((bestHits.size() > 1) || (totalHits > 1000)) {
+								updatedRead.setMappingQuality(0);
+							}
+							
+							outputReadsBam.addAlignment(updatedRead);
 						}
-						
-						outputReadsBam.addAlignment(updatedRead);
 					}
 				} else {
 					if (orig.getReadUnmappedFlag()) {
