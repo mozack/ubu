@@ -43,11 +43,11 @@ public class Aligner {
 	public void shortAlign(String input, String outputSam) throws IOException, InterruptedException {
 		String sai = outputSam + ".sai";
 		
-		String aln = "bwa aln " + reference + " " + input + " -f " + sai + " -t " + numThreads;
+		String aln = "bwa aln " + reference + " " + input + " -f " + sai + " -t " + numThreads + " -M 0";
 		
 		runCommand(aln);
 		
-		String convert = "bwa samse " + reference + " " + sai + " " + input + " -f " + outputSam  + " -n 100";
+		String convert = "bwa samse " + reference + " " + sai + " " + input + " -f " + outputSam  + " -n 1000";
 		
 		runCommand(convert);
 	}
