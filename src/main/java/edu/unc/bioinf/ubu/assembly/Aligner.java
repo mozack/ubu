@@ -1,11 +1,14 @@
 package edu.unc.bioinf.ubu.assembly;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 
 public class Aligner {
 	
 	private String reference;
 	private int numThreads;
+	private static final int MAX_SMALL_REFERENCE_LINES = 1000000;
 	
 	public Aligner(String reference, int numThreads) {
 		this.reference = reference;
@@ -43,7 +46,7 @@ public class Aligner {
 	public void shortAlign(String input, String outputSam) throws IOException, InterruptedException {
 		String sai = outputSam + ".sai";
 		
-		String aln = "bwa aln " + reference + " " + input + " -f " + sai + " -t " + numThreads + " -M 0";
+		String aln = "bwa aln " + reference + " " + input + " -f " + sai + " -t " + numThreads;
 		
 		runCommand(aln);
 		
@@ -52,7 +55,37 @@ public class Aligner {
 		runCommand(convert);
 	}
 	
+//	public void smallIndex() throws IOException, InterruptedException {
+//		runCommand("bwa index " + reference);
+//	}
+	
 	public void index() throws IOException, InterruptedException {
-		runCommand("bwa index " + reference);
+		
+		if (shouldUseSmallIndex()) {
+			runCommand("bwa index " + reference);	
+		} else {
+			runCommand("bwa index -a bwtsw " + reference);
+		}
+	}
+	
+	private boolean shouldUseSmallIndex() throws IOException {
+		BufferedReader reader = new BufferedReader(new FileReader(reference));
+		
+		try {
+			int lines = 0;
+			String line = reader.readLine();
+			while (line != null) {
+				lines++;
+				line = reader.readLine();
+				
+				if (lines >= 1000000) {
+					return false;
+				}
+			}
+		} finally {
+			reader.close();
+		}
+		
+		return true;
 	}
 }

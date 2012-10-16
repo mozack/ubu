@@ -24,6 +24,8 @@ public class OperatingSystemCommand {
 		if (ret != 0) {
 			throw new RuntimeException("cmd exited with non-zero return code : [" + ret + "] for command: [" + cmd + "]");
 		}
+		
+		proc.destroy();
 	}
 
 	public static void runCommand(String[] cmd) throws IOException, InterruptedException {
@@ -52,6 +54,7 @@ public class OperatingSystemCommand {
 		if (ret != 0) {
 			throw new RuntimeException("cmd exited with non-zero return code : [" + ret + "] for command: [" + cmdStr + "]");
 		}
+		
+		proc.destroy();
 	}
-
 }

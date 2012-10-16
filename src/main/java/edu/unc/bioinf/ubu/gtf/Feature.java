@@ -31,4 +31,8 @@ public class Feature {
 	public String getDescriptor() {
 		return seqname + "_" + start + "_" + end;
 	}
+	
+	public long getLength() {
+		return end-start;
+	}
 }

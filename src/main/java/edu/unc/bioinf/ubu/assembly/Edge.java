@@ -43,7 +43,7 @@ public class Edge {
 	}
 	
 	public void remove() {
-		to.removeFromEdge(this);
-		from.removeToEdge(this);
+//		to.removeFromEdge(this);
+//		from.removeToEdge(this);
 	}
 }

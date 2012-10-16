@@ -23,6 +23,7 @@ public class ReAlignerOptions extends Options {
 	private static final String MIN_UNIQUE_READS = "mur";
 	private static final String ALLOWED_MISMATCHES_FROM_CONTIG = "amc";
 	private static final String SKIP_UNALIGNED_ASSEMBLY = "no-unalign";
+	private static final String SMALL_ALIGNER_INDEX = "small-idx";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -49,6 +50,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(MIN_UNIQUE_READS, "Minimum number of unique reads per node").withRequiredArg().ofType(Integer.class);
             parser.accepts(ALLOWED_MISMATCHES_FROM_CONTIG, "Maximum number of allowed mismatches from contig for a read (default zero).").withRequiredArg().ofType(Integer.class);
             parser.accepts(SKIP_UNALIGNED_ASSEMBLY, "Skip assembly of reads that do not align to contigs.");
+            parser.accepts(SMALL_ALIGNER_INDEX, "Use small aligner index");
     	}
     	
     	return parser;
@@ -164,6 +166,10 @@ public class ReAlignerOptions extends Options {
 	
 	public boolean isSkipUnalignedAssembly() {
 		return getOptions().has(SKIP_UNALIGNED_ASSEMBLY);
+	}
+	
+	public boolean useSmallAlignerIndex() {
+		return getOptions().has(SMALL_ALIGNER_INDEX);
 	}
 	
 	public boolean isValid() {

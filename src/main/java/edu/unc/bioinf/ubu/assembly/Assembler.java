@@ -58,6 +58,8 @@ public class Assembler {
 	
 	int outputCount = 0;
 	
+	private boolean isEmpty = true;
+	
 	//TODO: Do not keep contigs in memory.
 	public boolean assembleContigs(String inputSam, String output, String prefix) throws FileNotFoundException, IOException, InterruptedException {
         SAMFileReader reader = new SAMFileReader(new File(inputSam));
@@ -117,7 +119,7 @@ public class Assembler {
 				
 //		printEdgeCounts();
 		
-		filterLowFrequencyEdges();
+//		filterLowFrequencyEdges();
 		filterLowFrequencyNodes();
 		
 		identifyRootNodes();
@@ -153,7 +155,7 @@ public class Assembler {
 			truncateFile(output);
 		}
 		
-		return contigs.size() > 0;
+		return !isEmpty;
 	}
 	
 	private void truncateFile(String file) throws InterruptedException, IOException {
@@ -204,22 +206,24 @@ public class Assembler {
 			}
 		}
 		
-		List<Edge> edgesToFilter = new ArrayList<Edge>();
+//		List<Edge> edgesToFilter = new ArrayList<Edge>();
 		
 		for (Node node : nodesToFilter) {
-			edgesToFilter.addAll(node.getToEdges());
-			edgesToFilter.addAll(node.getFromEdges());
+//			edgesToFilter.addAll(node.getToEdges());
+//			edgesToFilter.addAll(node.getFromEdges());
+			node.remove();
 		}
 		
-		for (Edge edge : edgesToFilter) {
-			edge.remove();
-		}
+//		for (Edge edge : edgesToFilter) {
+//			edge.remove();
+//		}
 		
 		for (Node node : nodesToFilter) {
 			nodes.remove(node.getSequence());
 		}
 	}
 	
+	/*
 	private void filterLowFrequencyEdges() {
 		
 		Set<Edge> edgesToFilter = new HashSet<Edge>();
@@ -238,6 +242,7 @@ public class Assembler {
 			edge.remove();
 		}
 	}
+	*/
 	
 	private void outputContigs(String prefix) throws IOException {
 		
@@ -254,7 +259,9 @@ public class Assembler {
 		contig.setDescriptor(prefix + "_" + outputCount++ + "_" + contig.getDescriptor());
 		writer.append(">" + contig.getDescriptor() + "\n");
 		writer.append(contig.getSequence());
-		writer.append("\n");		
+		writer.append("\n");
+		
+		isEmpty = false;
 	}
 	
 	private void identifyRootNodes() {
@@ -332,23 +339,24 @@ public class Assembler {
 		} else {
 			visitedNodes.add(node);
 			
-			Collection<Edge> edges = node.getToEdges();
+//			Collection<Edge> edges = node.getToEdges();
+			Collection<Node> toNodes = node.getToNodes();
 			
-			if (edges.isEmpty()) {
+			if (toNodes.isEmpty()) {
 				processContigTerminus(node, counts, contig);
 
 			} else {
 				// Append current character
 				contig.append(node, Character.toString(node.getSequence().getFirstCharacter()));
 				
-				potentialContigCount += edges.size() - 1;
+				potentialContigCount += toNodes.size() - 1;
 				
 				// Create a new contig branch for each edge
-				for (Edge edge : edges) {
-					counts.incrementEdgeCounts(edge.getCount());
+				for (Node toNode : toNodes) {
+//					counts.incrementEdgeCounts(edge.getCount());
 					Contig contigBranch = new Contig(contig);
 					Set<Node> visitedNodesBranch = new HashSet<Node>(visitedNodes);
-					buildContig(edge.getTo(), visitedNodesBranch, contigBranch, (Counts) counts.clone(), depth);
+					buildContig(toNode, visitedNodesBranch, contigBranch, (Counts) counts.clone(), depth);
 				}
 			}			
 		}
@@ -407,6 +415,7 @@ public class Assembler {
 		return -1;
 	}
 	
+	/*
 	private void printEdgeCounts() {
 		long[] edgeCounts = new long[nodes.size()];
 		List<Integer> edgeSizes = new ArrayList<Integer>();
@@ -430,6 +439,7 @@ public class Assembler {
 		System.out.println("Max edge size: " + sizes[sizes.length-1]);
 		System.out.println("Min edge size: " + sizes[0]);
 	}
+	*/
 	
 	private void addToGraph(SAMRecord read) {
 		addToGraph(read.getReadString());		
@@ -452,7 +462,7 @@ public class Assembler {
 			node.addReadSequence(sequence);
 			
 			if (prev != null) {
-				prev.addToEdge(node);
+				prev.addToNode(node);
 			}
 			
 			prev = node;
@@ -482,9 +492,12 @@ public class Assembler {
 		
 //		ayc.assembleContigs("/home/lisle/ayc/sim/sim1/chr21/chr21_37236845_37237045.bam", "/home/lisle/ayc/sim/sim1/chr21/1.fasta", "foo");
 		
-		ayc.assembleContigs("/home/lmose/dev/ayc/sim/sim261/assem/chr1_6161649_6165689.bam", "/home/lmose/dev/ayc/sim/sim261/assem/chr1_6161649_6165689.fasta", "foo");
+//		ayc.assembleContigs("/home/lmose/dev/ayc/sim/sim261/assem/small.bam", "/home/lmose/dev/ayc/sim/sim261/assem/small.fasta", "foo");
+//		ayc.assembleContigs("/home/lmose/dev/ayc/sim/sim261/assem/chr1_6161649_6165689.bam", "/home/lmose/dev/ayc/sim/sim261/assem/chr1_6161649_6165689.fasta", "foo");
 		
 //		ayc.assembleContigs("/home/lmose/dev/ayc/sim/38/assem/3.bam", "/home/lmose/dev/ayc/sim/38/assem/reads.fasta", "foo"); 
+		
+		ayc.assembleContigs("/home/lmose/dev/ayc/sim/38/bwasw.bam", "/home/lmose/dev/ayc/sim/38/bwasw_new.fasta", "foo");
 		
 //		ayc.assemble("/home/lisle/ayc/case0/normal_7576572_7577692.fastq", "/home/lisle/ayc/case0/normal_33_05.fasta");
 //		ayc.assemble("/home/lisle/ayc/case0/tumor_7576572_7577692.fastq", "/home/lisle/ayc/case0/tumor_33_05.fasta");

@@ -11,8 +11,12 @@ public class Node {
 
 	private Sequence sequence;
 	private int count = 1;
-	private Edge[] toEdges = new Edge[0];
-	private Edge[] fromEdges = new Edge[0];
+//	private Edge[] toEdges = new Edge[0];
+//	private Edge[] fromEdges = new Edge[0];
+	
+	private Node[] toNodes = new Node[0];
+	private Node[] fromNodes = new Node[0];
+	
 //	private List<Edge> toEdges = new ArrayList<Edge>(1);
 //	private List<Edge> fromEdges = new ArrayList<Edge>(1);
 //	private Map<Node, Edge> toEdges = new HashMap<Node, Edge>(2);
@@ -49,6 +53,15 @@ public class Node {
 		return count;
 	}
 	
+	public Collection<Node> getToNodes() {
+		return Arrays.asList(toNodes);
+	}
+	
+	public Collection<Node> getFromNodes() {
+		return Arrays.asList(fromNodes);
+	}
+	
+/*
 	public Collection<Edge> getToEdges() {
 		return Arrays.asList(toEdges);
 	}
@@ -56,6 +69,7 @@ public class Node {
 	public Collection<Edge> getFromEdges() {
 		return Arrays.asList(fromEdges);
 	}
+*/
 	
 	public Sequence getSequence() {
 		return sequence;
@@ -73,110 +87,19 @@ public class Node {
 			}
 		}
 	}
-	
-	private void printMultiEdges() {
-		int aboveThreshold = 0;
-		
-		for (Edge edge : toEdges) {
-			if (edge.getCount() > 50) {
-				aboveThreshold++;
-			}
-		}
-		
-		if (aboveThreshold > 1) {
-			System.out.println("------- Edge --------");
-			for (Edge edge : toEdges) {
-				System.out.print(edge.getCount() + ", ");
-			}
-			
-			System.out.println();
-		}
-	}
-	
-	public List<Edge> getInfrequentEdges(double minFreq) {
-		List<Edge> infrequentEdges = new ArrayList<Edge>();
-		
-		infrequentEdges.addAll(getInfrequentEdges(minFreq, toEdges));
-		infrequentEdges.addAll(getInfrequentEdges(minFreq, fromEdges));
-		
-		return infrequentEdges;
-	}
-	
-	private List<Edge> getInfrequentEdges(double minFreq, Edge[] edges) {
-		List<Edge> infrequentEdges = new ArrayList<Edge>();
-		
-		double total = getEdgeTotal(edges);
 				
-		for (Edge edge : edges) {
-			if (((double) edge.getCount() / total) < minFreq) {
-				infrequentEdges.add(edge);
-			}
-		}
-		
-		return infrequentEdges;
-	}
-	
-	private double getEdgeTotal(Edge[] edges) {
-		double total = 0.0;
-		
-		for (Edge edge : edges) {
-			total += edge.getCount();
-		}
-
-		return total;
-	}
-	
-	public List<Edge> getFrequentToEdges(double minFreq) {
-		
-		List<Edge> frequentEdges = new ArrayList<Edge>();
-		
-		double total = getEdgeTotal(toEdges);
-		
-		for (Edge edge : toEdges) {
-			if (((double) edge.getCount() / total) >= minFreq) {
-				frequentEdges.add(edge);
-			}
-		}
-		
-		return frequentEdges;
-	}
-	
 	public boolean hasMultipleUniqueReads() {
 		return hasMultipleUniqueReads;
 	}
 	
-	public Edge getMostCommonEdge() {
-		printMultiEdges();
 		
-		Edge topEdge = null;
-		int freq = 0;
-		
-//		if (toEdges.size() > 1)
-//			System.out.println("------- Edge --------");
-		
-		for (Edge edge : toEdges) {
-//			if (toEdges.size() > 1) 
-//				System.out.print(edge.getCount() + ", ");
-			
-			if (edge.getCount() > freq) {
-				topEdge = edge;
-				freq = edge.getCount();
-			}
-		}
-		
-//		if (toEdges.size() > 1)
-//			System.out.println();
-		
-		return topEdge;
-	}
-		
-	private Edge[] addEdge(Edge[] edges, Edge edge) {
+	private Node[] addNode(Node[] nodes, Node node) {
 //		int minCapacity = edges.length + 1;
 		//Edge[] newEdges = new Edge[edges.length + 1];
-		Edge[] newEdges = Arrays.copyOf(edges, edges.length + 1);
-		newEdges[edges.length] = edge;
+		Node[] newNodes = Arrays.copyOf(nodes, nodes.length + 1);
+		newNodes[nodes.length] = node;
 		
-		return newEdges;
+		return newNodes;
 		
 //        int oldCapacity = edges.length;
 //        if (minCapacity > oldCapacity) {
@@ -189,62 +112,64 @@ public class Node {
 //        }
 	}
 	
-	public void addToEdge(Node to) {
-		Edge edge = findEdge(to);
+	public void addToNode(Node to) {
+		Node node = findNode(to);
 		
-		if (edge == null) {
-			edge = new Edge(this, to);
-			toEdges = addEdge(toEdges, edge);
-			to.updateFromEdges(edge);
+		if (node == null) {
+//			node = new Edge(this, to);
+			toNodes = addNode(toNodes, to);
+			to.updateFromEdges(this);
 		} else {
-			edge.incrementCount();
+//			node.incrementCount();
+//			edge.incrementCount();
 		}
 	}
 	
 	public boolean isRootNode() {
-		return fromEdges.length == 0;
+		return fromNodes.length == 0;
 	}
 	
-	private void updateFromEdges(Edge edge) {
-		fromEdges = addEdge(fromEdges, edge);
+	private void updateFromEdges(Node node) {
+		fromNodes = this.addNode(fromNodes, node);
+//		fromEdges = addEdge(fromEdges, edge);
 	}
 	
 	public boolean isSingleton() {
-		return fromEdges.length == 0 && toEdges.length == 0;
+		return fromNodes.length == 0 && toNodes.length == 0;
 	}
 	
 	//TODO: Smarter array allocation
-	public void removeToEdge(Edge edge) {
+	public void removeToNode(Node to) {
 //		this.toEdges.remove(edge.getTo());
-		int index = this.findToEdgeIndex(edge.getTo());
+		int index = this.findToNodeIndex(to);
 		if (index > -1) {
-			Edge[] newEdges = new Edge[toEdges.length-1];
-			System.arraycopy(toEdges, 0, newEdges, 0, index);
-			if ((index) < newEdges.length) { 
-				System.arraycopy(toEdges, index+1, newEdges, index, newEdges.length-index);
+			Node[] newNodes = new Node[toNodes.length-1];
+			System.arraycopy(toNodes, 0, newNodes, 0, index);
+			if ((index) < newNodes.length) { 
+				System.arraycopy(toNodes, index+1, newNodes, index, newNodes.length-index);
 			}
 			
-			toEdges = newEdges;
+			toNodes = newNodes;
 		}
 	}
 	
-	public void removeFromEdge(Edge edge) {
+	public void removeFromNode(Node node) {
 //		this.fromEdges.remove(edge.getFrom());
-		int index = this.findFromEdgeIndex(edge.getFrom());
+		int index = this.findFromNodeIndex(node);
 		if (index > -1) {
-			Edge[] newEdges = new Edge[fromEdges.length-1];
-			System.arraycopy(fromEdges, 0, newEdges, 0, index);
-			if ((index) < newEdges.length) {
-				System.arraycopy(fromEdges, index+1, newEdges, index, newEdges.length-index);
+			Node[] newNodes = new Node[fromNodes.length-1];
+			System.arraycopy(fromNodes, 0, newNodes, 0, index);
+			if ((index) < newNodes.length) {
+				System.arraycopy(fromNodes, index+1, newNodes, index, newNodes.length-index);
 			}
 			
-			fromEdges = newEdges;
+			fromNodes = newNodes;
 		}
 	}
 	
-	private int findToEdgeIndex(Node to) {
-		for (int i=0; i<toEdges.length; i++) {
-			if (toEdges[i].getTo().equals(to)) {
+	private int findToNodeIndex(Node to) {
+		for (int i=0; i<toNodes.length; i++) {
+			if (toNodes[i].equals(to)) {
 				return i;
 			}
 		}
@@ -252,9 +177,9 @@ public class Node {
 		return -1;
 	}
 	
-	private int findFromEdgeIndex(Node from) {
-		for (int i=0; i<fromEdges.length; i++) {
-			if (fromEdges[i].getFrom().equals(from)) {
+	private int findFromNodeIndex(Node from) {
+		for (int i=0; i<fromNodes.length; i++) {
+			if (fromNodes[i].equals(from)) {
 				return i;
 			}
 		}
@@ -263,13 +188,23 @@ public class Node {
 	}
 
 	
-	private Edge findEdge(Node to) {
-		for (Edge edge : toEdges) {
-			if (edge.getTo().equals(to)) {
-				return edge;
+	private Node findNode(Node to) {
+		for (Node node : toNodes) {
+			if (node.equals(to)) {
+				return node;
 			}
 		}
 		
 		return null;
+	}
+	
+	public void remove() {
+		for (Node toNode : toNodes) {
+			toNode.removeFromNode(this);
+		}
+		
+		for (Node fromNode : fromNodes) {
+			fromNode.removeToNode(this);
+		}
 	}
 }

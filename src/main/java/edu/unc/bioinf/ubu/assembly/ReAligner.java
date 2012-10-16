@@ -38,6 +38,8 @@ import edu.unc.bioinf.ubu.sam.ReverseComplementor;
 public class ReAligner {
 
 	private static final int MAX_UNALIGNED_READS = 1000000;
+	private static final int MAX_REGION_LENGTH = 5000;
+	private static final int MIN_REGION_REMAINDER = 1000;
 	private static final long RANDOM_SEED = 1;
 	
 	private int missingXATag = 0;
@@ -76,6 +78,12 @@ public class ReAligner {
 	
 	private ReverseComplementor reverseComplementor = new ReverseComplementor();
 	
+	private boolean useSmallAlignerIndex = false;
+	
+	public void setUseSmallAlignerIndex(boolean smallAlignerIndex) {
+		this.useSmallAlignerIndex = smallAlignerIndex;
+	}
+
 	public void reAlign(String inputSam, String outputSam) throws Exception {
 
 		System.out.println("input: " + inputSam);
@@ -168,25 +176,27 @@ public class ReAligner {
 		
 		log("Cleaning contigs");
 		String cleanContigsFasta = tempDir + "/" + "clean_contigs.fasta";
-		cleanAndOutputContigs(contigsSam, cleanContigsFasta);
+		boolean hasCleanContigs = cleanAndOutputContigs(contigsSam, cleanContigsFasta);
 		
-		log("Aligning original reads to contigs");
-		String alignedToContigSam = tempDir + "/" + "align_to_contig.sam";
-		this.alignToContigs(inputSam, alignedToContigSam, cleanContigsFasta);
-		
-		log("Convert aligned to contig to bam, and sorting bams");
-		String alignedToContigBam = tempDir + "/" + "align_to_contig.bam";
-		String sortedAlignedToContig = tempDir + "/" + "sorted_aligned_to_contig";
-		String sortedOriginalReads = tempDir + "/" + "sorted_original_reads"; 
-		runCommand("samtools view -bS " + alignedToContigSam + " -o " + alignedToContigBam);
-		runCommand("samtools sort -n " + alignedToContigBam + " " + sortedAlignedToContig);
-		runCommand("samtools sort -n " + inputSam + " " + sortedOriginalReads);
-		sortedAlignedToContig += ".bam";
-		sortedOriginalReads += ".bam";
-		
-		log("Adjust reads");
-		String unaligned = tempDir + "/" + "unaligned_to_contig.bam";
-		adjustReads(sortedOriginalReads, sortedAlignedToContig, unaligned, outputReadsBam);
+		if (hasCleanContigs) {
+			log("Aligning original reads to contigs");
+			String alignedToContigSam = tempDir + "/" + "align_to_contig.sam";
+			this.alignToContigs(inputSam, alignedToContigSam, cleanContigsFasta);
+			
+			log("Convert aligned to contig to bam, and sorting bams");
+			String alignedToContigBam = tempDir + "/" + "align_to_contig.bam";
+			String sortedAlignedToContig = tempDir + "/" + "sorted_aligned_to_contig";
+			String sortedOriginalReads = tempDir + "/" + "sorted_original_reads"; 
+			runCommand("samtools view -bS " + alignedToContigSam + " -o " + alignedToContigBam);
+			runCommand("samtools sort -n " + alignedToContigBam + " " + sortedAlignedToContig);
+			runCommand("samtools sort -n " + inputSam + " " + sortedOriginalReads);
+			sortedAlignedToContig += ".bam";
+			sortedOriginalReads += ".bam";
+			
+			log("Adjust reads");
+			String unaligned = tempDir + "/" + "unaligned_to_contig.bam";
+			adjustReads(sortedOriginalReads, sortedAlignedToContig, unaligned, outputReadsBam);
+		}
 		
 		outputReadsBam.close();
 	}
@@ -232,12 +242,15 @@ public class ReAligner {
 		}
 	}
 	
-	private void waitForAllThreadsToComplete() throws InterruptedException {
+	private void waitForAllThreadsToComplete() throws InterruptedException, IOException {
 		long start = System.currentTimeMillis();
 		while (activeThreads() > 0) {
 			long elapsedSecs = (System.currentTimeMillis() - start) / 1000;
 			if ((elapsedSecs % 60) == 0) {
 				log("Waiting on " + threads.size() + " threads.");
+				
+				logOSMemory();
+				
 			}
 			Thread.sleep(500);
 		}
@@ -400,6 +413,13 @@ public class ReAligner {
 	private void loadRegions() throws IOException {
 		GtfLoader loader = new GtfLoader();
 		regions = loader.load(regionsGtf);
+		
+		regions = splitRegions(regions);
+		
+		System.out.println("Regions:");
+		for (Feature region : regions) {
+			System.out.println(region.getSeqname() + "\t" + region.getStart() + "\t" + region.getEnd());
+		}
 	}
 
 	public void setRegionsGtf(String gtfFile) {
@@ -426,12 +446,28 @@ public class ReAligner {
 		sam2Fastq.convert(bam, fastq);
 	}
 	
+	private static int memCnt = 0;
+	private void logOSMemory() throws InterruptedException, IOException {
+//		String[] cmd = new String[] { "bash", "-c", "echo " + memCnt + " >> memory.txt" };
+//		runCommand(cmd);
+//		
+//		cmd = new String[] { "bash", "-c", "free -g >> memory.txt" };
+//		runCommand(cmd);
+		
+		System.out.println(memCnt++ +
+				" mem total: " + Runtime.getRuntime().totalMemory() + 
+				", max: " + Runtime.getRuntime().maxMemory() + 
+				", free: " + Runtime.getRuntime().freeMemory());
+	}
+	
 	private void appendFile(String file1, String file2) throws InterruptedException, IOException {
 		String[] cmd = new String[] { "bash", "-c", "cat " + file1 + " >> " + file2 };
 		runCommand(cmd);
 	}
 		
-	private void cleanAndOutputContigs(String contigsSam, String cleanContigsFasta) throws IOException {
+	private boolean cleanAndOutputContigs(String contigsSam, String cleanContigsFasta) throws IOException {
+		
+		boolean hasCleanContigs = false;
 		
 		BufferedWriter writer = new BufferedWriter(new FileWriter(cleanContigsFasta, false));
 		
@@ -463,12 +499,15 @@ public class ReAligner {
 					writer.append(">" + contigName);
 					writer.append(bases);
 					writer.append("\n");
+					hasCleanContigs = true;
 				}
 			}
 		}
 		contigReader.close();
 		
 		writer.close();
+		
+		return hasCleanContigs;
 	}
 	
 	// Assumes entirely soft clipped reads are filtered prior to here.
@@ -518,6 +557,7 @@ public class ReAligner {
 		
 		// Build contig fasta index
 		Aligner contigAligner = new Aligner(contigFasta, numThreads);
+		
 		contigAligner.index();
 		
 		// Align region fastq against assembled contigs
@@ -585,7 +625,7 @@ public class ReAligner {
 		}
 	}
 	
-	private void adjustReads(String originalReadsSam, String alignedToContigSam, String unalignedSam, SAMFileWriter outputReadsBam) throws IOException {
+	private void adjustReads(String originalReadsSam, String alignedToContigSam, String unalignedSam, SAMFileWriter outputReadsBam) throws IOException, InterruptedException {
 		
 		SAMFileWriter unalignedReadsBam = new SAMFileWriterFactory().makeSAMOrBAMWriter(
 				samHeader, true, new File(unalignedSam));
@@ -603,7 +643,14 @@ public class ReAligner {
 		
 		SamStringReader samStringReader = new SamStringReader();
 		
+		int ctr = 0;
+		
 		while ((contigIter.hasNext() || cachedContig != null) && (origIter.hasNext())) {
+			
+			if ((ctr++ % 100000) == 0) {
+				this.logOSMemory();
+			}
+			
 			SAMRecord orig = origIter.next();
 			SAMRecord read;
 			
@@ -629,8 +676,10 @@ public class ReAligner {
 					contigReadStr = contigReadStr.replace('~', '\t');
 					SAMRecord contigRead = samStringReader.getRead(contigReadStr);
 					
+					int bestMismatches = getIntAttribute(read, "XM");
+					
 					HitInfo hit = new HitInfo(contigRead, read.getAlignmentStart(),
-							read.getReadNegativeStrandFlag() ? '-' : '+', getIntAttribute(read, "XM"));
+							read.getReadNegativeStrandFlag() ? '-' : '+', bestMismatches);
 					
 					bestHits.add(hit);
 					
@@ -642,6 +691,7 @@ public class ReAligner {
 					//TODO: If too many best hits, what to do?
 					
 					if ((totalHits > 1) && (totalHits < 1000)) {
+//					if (totalHits < -1000) {
 						// Look in XA tag.
 						String alternateHitsStr = (String) read.getAttribute("XA");
 						if (alternateHitsStr == null) {
@@ -651,6 +701,7 @@ public class ReAligner {
 						} else {
 							
 							String[] alternates = alternateHitsStr.split(";");
+							
 							for (int i=0; i<alternates.length-1; i++) {
 								String[] altInfo = alternates[i].split(",");
 								String altContigReadStr = altInfo[0];
@@ -659,17 +710,24 @@ public class ReAligner {
 								String cigar = altInfo[2];
 								int mismatches = Integer.parseInt(altInfo[3]);
 								
-								if (cigar.equals("100M")) {
+								if ((cigar.equals("100M")) && (mismatches < bestMismatches)) {
+									System.out.println("MISMATCH_ISSUE: " + read.getSAMString());
+								}
+								
+								if ((cigar.equals("100M")) && (mismatches == bestMismatches)) {
 									altContigReadStr = altContigReadStr.substring(altContigReadStr.indexOf('~')+1);
 									altContigReadStr = altContigReadStr.replace('~', '\t');
 									contigRead = samStringReader.getRead(altContigReadStr);
-									
-									hit = new HitInfo(contigRead, position, strand, mismatches);
-									bestHits.add(hit);
+//									
+//									hit = new HitInfo(contigRead, position, strand, mismatches);
+//									bestHits.add(hit);
 								}
 							}
 						}
 					}
+					
+					// chr_pos_cigar
+					Map<String, SAMRecord> outputReadAlignmentInfo = new HashMap<String, SAMRecord>();
 					
 					for (HitInfo hitInfo : bestHits) {
 						
@@ -729,13 +787,25 @@ public class ReAligner {
 							
 							// Contig's mapping quality
 							updatedRead.setAttribute("YC", hitInfo.getRecord().getMappingQuality());
+														
+							// Check to see if this read has been output with the same alignment already.
+							String readAlignmentInfo = updatedRead.getReferenceName() + "_" + updatedRead.getAlignmentStart() + "_" +
+									(updatedRead.getReadNegativeStrandFlag() ? "-" : "+") + "_" + updatedRead.getCigarString();
 							
-							if ((bestHits.size() > 1) || (totalHits > 1000)) {
-								updatedRead.setMappingQuality(0);
+							if (!outputReadAlignmentInfo.containsKey(readAlignmentInfo)) {
+								outputReadAlignmentInfo.put(readAlignmentInfo, updatedRead);								
 							}
-							
-							outputReadsBam.addAlignment(updatedRead);
 						}
+					}
+					
+					for (SAMRecord readToOutput : outputReadAlignmentInfo.values()) {
+						
+						// If the read mapped to multiple locations, set mapping quality to zero.
+						if ((outputReadAlignmentInfo.size() > 1) || (totalHits > 1000)) {
+							readToOutput.setMappingQuality(0);
+						}
+
+						outputReadsBam.addAlignment(readToOutput);
 					}
 				} else {
 					if (orig.getReadUnmappedFlag()) {
@@ -841,6 +911,45 @@ public class ReAligner {
 				samHeader, true, new File(outputReadsBamFilename));
 	}
 	*/
+	
+	/**
+	 *  If any of the input list of features is greater than maxSize, split them into multiple features. 
+	 */
+	public List<Feature> splitRegions(List<Feature> regions) {
+		List<Feature> splitRegions = new ArrayList<Feature>();
+		
+		for (Feature region : regions) {
+			if (region.getLength() <= MAX_REGION_LENGTH + MIN_REGION_REMAINDER) {
+				splitRegions.add(region);
+			} else {
+				splitRegions.addAll(split(region));
+			}
+		}
+		
+		return splitRegions;
+	}
+	
+	public List<Feature> split(Feature region) {
+		List<Feature> regions = new ArrayList<Feature>();
+		
+		long pos = region.getStart();
+		
+		while (pos < region.getEnd()) {
+			long start = pos;
+			long end = pos + MAX_REGION_LENGTH;
+			
+			// If we're at or near the end of the region, stop at region end.
+			if (end > (region.getEnd() - MIN_REGION_REMAINDER)) {
+				end = region.getEnd();
+			}
+			
+			pos = end + 1;
+			
+			regions.add(new Feature(region.getSeqname(), start, end));
+		}
+		
+		return regions;
+	}
 		
 	private Assembler newAssembler() {
 		Assembler assem = new Assembler();
@@ -926,6 +1035,9 @@ public class ReAligner {
 	}
 
 	public static void run(String[] args) throws Exception {
+		
+		System.out.println("Starting...");
+		
 		ReAlignerOptions options = new ReAlignerOptions();
 		options.parseOptions(args);
 
@@ -954,6 +1066,7 @@ public class ReAligner {
 			realigner.setMinContigMapq(options.getMinContigMapq());
 			realigner.setAllowedMismatchesFromContig(options.getAllowedMismatchesFromContig());
 			realigner.setShouldReprocessUnaligned(!options.isSkipUnalignedAssembly());
+			realigner.setUseSmallAlignerIndex(options.useSmallAlignerIndex());
 
 			long s = System.currentTimeMillis();
 
