@@ -91,6 +91,10 @@ public class SamMultiMappingReader implements Iterable<List<SAMRecord>> {
 	public Iterator<List<SAMRecord>> iterator() {
 		return new SamMultiMappingIterator(this);
 	}
+    
+    public void close() {
+    	inputSam.close();
+    }
 
 	private static class SamMultiMappingIterator implements Iterator<List<SAMRecord>> {
 

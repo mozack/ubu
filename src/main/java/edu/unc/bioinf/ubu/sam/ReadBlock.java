@@ -102,7 +102,9 @@ public class ReadBlock {
     	int length = 0;
     	
     	for (ReadBlock block : blocks) {
-    		length += block.getLength();
+    		if (block.getType() != CigarOperator.D) { 
+    			length += block.getLength();
+    		}
     	}
     	
     	return length;
