@@ -831,10 +831,13 @@ public class ReAligner {
 					
 					int bestMismatches = getIntAttribute(read, "XM");
 					
-					HitInfo hit = new HitInfo(contigRead, read.getAlignmentStart(),
-							read.getReadNegativeStrandFlag() ? '-' : '+', bestMismatches);
-					
-					bestHits.add(hit);
+					// Filter this hit if it aligns past the end of the contig
+					if (read.getAlignmentEnd() <= contigRead.getReadLength()) {
+						HitInfo hit = new HitInfo(contigRead, read.getAlignmentStart(),
+								read.getReadNegativeStrandFlag() ? '-' : '+', bestMismatches);
+						
+						bestHits.add(hit);
+					}
 					
 					int numBestHits = getIntAttribute(read, "X0");
 					int subOptimalHits = getIntAttribute(read, "X1");
@@ -872,8 +875,11 @@ public class ReAligner {
 									altContigReadStr = altContigReadStr.replace('~', '\t');
 									contigRead = samStringReader.getRead(altContigReadStr);
 									
-									hit = new HitInfo(contigRead, position, strand, mismatches);
-									bestHits.add(hit);
+									// Filter this hit if it aligns past the end of the contig
+									if ((position + read.getReadLength()) <= contigRead.getReadLength()) {										
+										HitInfo hit = new HitInfo(contigRead, position, strand, mismatches);
+										bestHits.add(hit);
+									}
 								}
 							}
 						}
