@@ -76,6 +76,7 @@ public class Assembler {
 		
 		for (SAMRecord read : reader) {
 			
+			//TODO: Disallow anything other than ATCG?
 			boolean hasAmbiguousBases = read.getReadString().contains("N");
 			Integer numBestHits = (Integer) read.getIntegerAttribute("X0");
 			boolean hasAmbiguousInitialAlignment = numBestHits != null && numBestHits > 1;
@@ -297,6 +298,7 @@ public class Assembler {
 		if (!counts.isTerminatedAtRepeat()) {
 			// We've reached the terminus, append the remainder of the node.
 			contig.append(node, node.getSequence().getSequenceAsString());
+		} else {
 			hasRepeat = true;
 		}
 		
@@ -309,7 +311,7 @@ public class Assembler {
 				contig.setDescriptor(counts.toString());
 				
 				if (counts.isTerminatedAtRepeat()) {
-					contig.setDescriptor(contig.getDescriptor() + "_repeatNode:" + node.getSequence());
+					contig.setDescriptor(contig.getDescriptor() + "_repeatNode:" + node.getSequence().getSequenceAsString());
 				}
 				
 				contigs.add(contig);
