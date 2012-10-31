@@ -776,6 +776,16 @@ public class ReAligner {
 		}
 	}
 	
+	private int getEditDistance(SAMRecord read) {
+		Integer distance = read.getIntegerAttribute("NM");
+		
+		if (distance == null) {
+			distance = read.getReadLength();
+		}
+		
+		return distance;
+	}
+	
 	private void adjustReads(String originalReadsSam, String alignedToContigSam, SAMFileWriter outputReadsBam) throws IOException, InterruptedException {
 		
 //		SAMFileWriter unalignedReadsBam = new SAMFileWriterFactory().makeSAMOrBAMWriter(
@@ -815,8 +825,11 @@ public class ReAligner {
 			boolean isReadWritten = false;
 			
 			if (orig.getReadName().equals(read.getReadName())) {
-				//TODO: Check for mismatches.  Smarter CIGAR check.
-				if ((read.getCigarString().equals("100M")) && (read.getReadUnmappedFlag() == false)) {
+				//TODO: Smarter cigar check
+				// Only adjust reads that align to contig with no indel and shorter edit distance than the original alignment
+				if ((read.getCigarString().equals("100M")) && 
+					(read.getReadUnmappedFlag() == false)  &&
+					(getEditDistance(read) < getEditDistance(orig))) {
 				
 					SAMRecord origRead = orig;
 					String contigReadStr = read.getReferenceName();
@@ -832,7 +845,9 @@ public class ReAligner {
 					int bestMismatches = getIntAttribute(read, "XM");
 					
 					// Filter this hit if it aligns past the end of the contig
-					if (read.getAlignmentEnd() <= contigRead.getReadLength()) {
+					// Must use cigar length instead of read length, because the
+					// the contig read bases are not loaded.
+					if (read.getAlignmentEnd() <= contigRead.getCigar().getReadLength()) {
 						HitInfo hit = new HitInfo(contigRead, read.getAlignmentStart(),
 								read.getReadNegativeStrandFlag() ? '-' : '+', bestMismatches);
 						
@@ -876,7 +891,9 @@ public class ReAligner {
 									contigRead = samStringReader.getRead(altContigReadStr);
 									
 									// Filter this hit if it aligns past the end of the contig
-									if ((position + read.getReadLength()) <= contigRead.getReadLength()) {										
+									// Must use cigar length instead of read length, because the
+									// the contig read bases are not loaded.
+									if ((position + read.getReadLength()) <= contigRead.getCigar().getReadLength()) {
 										HitInfo hit = new HitInfo(contigRead, position, strand, mismatches);
 										bestHits.add(hit);
 									}
@@ -921,36 +938,6 @@ public class ReAligner {
 								updatedRead.setReadString(reverseComplementor.reverseComplement(read.getReadString()));
 								updatedRead.setBaseQualityString(reverseComplementor.reverse(read.getBaseQualityString()));								
 							}
-							
-//							if (hitInfo.isOnNegativeStrand()) {
-//								updatedRead.setReadString(reverseComplementor.reverseComplement(read.getReadString()));
-//								updatedRead.setBaseQualityString(reverseComplementor.reverse(read.getBaseQualityString()));
-//							} else {
-//								updatedRead.setReadString(read.getReadString());
-//								updatedRead.setBaseQualityString(read.getBaseQualityString());								
-//							}
-									
-//							if ((!origRead.getReadUnmappedFlag()) && (hitInfo.isOnNegativeStrand())) {
-//								if (!origRead.getReadNegativeStrandFlag()) {
-//									updatedRead.setReadString(reverseComplementor.reverseComplement(updatedRead.getReadString()));
-//									updatedRead.setBaseQualityString(reverseComplementor.reverse(updatedRead.getBaseQualityString()));
-//								}
-//								
-//								updatedRead.setReadNegativeStrandFlag(!origRead.getReadNegativeStrandFlag());							
-//							}
-							
-							// Reverse complement / reverse original read bases and qualities if
-							// the original read was unmapped and is now on the reverse strand
-							// Originally mapped reads would already be expressed in forward strand context
-							// TODO: Do we need to handle forward / reverse strand change.  Is this even possible?
-							// TODO: What about reads that align across chromosomes and are tagged as unmapped
-							//       Might they already be reverse complemented?
-//							if ((origRead.getReadUnmappedFlag()) && (hitInfo.isOnNegativeStrand())) {
-//								updatedRead.setReadString(reverseComplementor.reverseComplement(updatedRead.getReadString()));
-//								updatedRead.setBaseQualityString(reverseComplementor.reverse(updatedRead.getBaseQualityString()));
-//								
-//								updatedRead.setReadNegativeStrandFlag(hitInfo.isOnNegativeStrand());
-//							}
 							
 							// If the read's alignment info has been modified, record the original alignment.
 							if (origRead.getReadUnmappedFlag() ||
@@ -1333,14 +1320,20 @@ public class ReAligner {
 //		String reference = "/home/lmose/reference/chr11/chr11.fa";
 //		String regions = "/home/lmose/dev/ayc/regions/chr11_261.gtf";
 //		String tempDir = "/home/lmose/dev/ayc/sim/sim261/chr11/working";
-		
-		String input = "/home/lmose/dev/ayc/sim/sim80/sorted_rainbow.bam";
+
+		/*
+		String input = "/home/lmose/dev/ayc/sim/sim80/sorted16.bam";
 		String output = "/home/lmose/dev/ayc/sim/sim80/rainbow_realigned.bam";
 		String reference = "/home/lmose/reference/chr16/chr16.fa";
 		String regions = "/home/lmose/dev/ayc/regions/clinseq5/rainbow.gtf";
 		String tempDir = "/home/lmose/dev/ayc/sim/sim80/rainbow_working";
+		*/
 
-		
+		String input = "/home/lmose/dev/ayc/sim/sim80/sorted16.bam";
+		String output = "/home/lmose/dev/ayc/sim/sim80/rainbow_realigned4.bam";
+		String reference = "/home/lmose/reference/chr16/chr16.fa";
+		String regions = "/home/lmose/dev/ayc/regions/clinseq5/rainbow.gtf";
+		String tempDir = "/home/lmose/dev/ayc/sim/sim80/rainbow_working4";		
 
 		/*
 		String input = "/home/lmose/dev/ayc/sim/38/sorted_tiny.bam";
@@ -1386,8 +1379,8 @@ public class ReAligner {
 		AssemblerSettings settings = new AssemblerSettings();
 		settings.setKmerSize(63);
 		settings.setMinContigLength(100);
-		settings.setMinEdgeFrequency(6);
-		settings.setMinNodeFrequncy(6);
+		settings.setMinEdgeFrequency(3);
+		settings.setMinNodeFrequncy(3);
 		settings.setMinEdgeRatio(.05);
 		settings.setMaxPotentialContigs(30000);
 		settings.setMinContigRatio(.3);
