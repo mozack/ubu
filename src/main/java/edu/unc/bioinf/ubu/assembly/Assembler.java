@@ -1,14 +1,11 @@
 package edu.unc.bioinf.ubu.assembly;
 
-import static edu.unc.bioinf.ubu.assembly.OperatingSystemCommand.runCommand;
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -37,6 +34,8 @@ public class Assembler {
 	private double minEdgeRatio;
 	
 	private int minUniqueReads = 1;
+	
+	private boolean shouldTruncateOutputOnRepeat = true;
 	
 	private int maxPotentialContigs = 500;
 	
@@ -146,9 +145,9 @@ public class Assembler {
 			reader.close();
 		}
 		
-		if (hasRepeat) {
+		if (hasRepeat && shouldTruncateOutputOnRepeat) {
 			System.out.println("REPEATING_NODE for : " + inputSam);
-//			shouldTruncateOutput = true;
+			shouldTruncateOutput = true;
 		}
 		
 		if (shouldTruncateOutput) {
@@ -160,12 +159,15 @@ public class Assembler {
 	}
 	
 	private void truncateFile(String file) throws InterruptedException, IOException {
-		runCommand("rm " + file);
-		runCommand("touch " + file);
+		FileUtil.truncateFile(file);
 	}
 	
 	public void setKmerSize(int kmerSize) {
 		this.kmerSize = kmerSize;
+	}
+	
+	public void setTruncateOutputOnRepeat(boolean truncateOutputOnRepeat) {
+		this.shouldTruncateOutputOnRepeat = truncateOutputOnRepeat;
 	}
 	
 	public void setMinContigLength(int minContigLength) {
