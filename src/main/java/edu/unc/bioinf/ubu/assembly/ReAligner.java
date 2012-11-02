@@ -1170,6 +1170,7 @@ public class ReAligner {
 		assem.setMaxPotentialContigs(MAX_POTENTIAL_UNALIGNED_CONTIGS);
 		assem.setMinContigRatio(-1.0);
 		assem.setMinUniqueReads(assemblerSettings.getMinUniqueReads());
+		assem.setTruncateOutputOnRepeat(false);
 
 		return assem;
 	}
@@ -1295,6 +1296,7 @@ public class ReAligner {
 */
 	
 	public static void main(String[] args) throws Exception {
+		System.out.println("0.1");
 		ReAligner realigner = new ReAligner();
 
 		long s = System.currentTimeMillis();
