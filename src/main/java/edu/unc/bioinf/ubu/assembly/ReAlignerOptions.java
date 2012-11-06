@@ -6,7 +6,9 @@ import edu.unc.bioinf.ubu.util.Options;
 public class ReAlignerOptions extends Options {
 	
 	private static final String INPUT_SAM = "in";
+	private static final String INPUT_SAM2 = "in2";
 	private static final String OUTPUT_SAM = "out";
+	private static final String OUTPUT_SAM2 = "out2";
 	private static final String REFERENCE = "ref";
 	private static final String REFERENCE_DIR = "ref-dir";
 	private static final String TARGET_REGIONS = "targets";
@@ -33,7 +35,9 @@ public class ReAlignerOptions extends Options {
     	if (parser == null) {
             parser = new OptionParser();
             parser.accepts(INPUT_SAM, "Required input sam or bam file").withRequiredArg().ofType(String.class);
+            parser.accepts(INPUT_SAM2, "Required input sam or bam file").withRequiredArg().ofType(String.class);
             parser.accepts(OUTPUT_SAM, "Required output sam or bam file").withRequiredArg().ofType(String.class);
+            parser.accepts(OUTPUT_SAM2, "Required output sam or bam file").withRequiredArg().ofType(String.class);
             parser.accepts(REFERENCE, "Genome reference location").withRequiredArg().ofType(String.class);
             parser.accepts(REFERENCE_DIR, "Directory of individually referenced chromosomes").withRequiredArg().ofType(String.class);
             parser.accepts(TARGET_REGIONS, "GTF containing target regions").withRequiredArg().ofType(String.class);
@@ -106,6 +110,14 @@ public class ReAlignerOptions extends Options {
 	
 	public String getOutputFile() {
 		return (String) getOptions().valueOf(OUTPUT_SAM);
+	}
+	
+	public String getInputFile2() {
+		return (String) getOptions().valueOf(INPUT_SAM2);
+	}
+	
+	public String getOutputFile2() {
+		return (String) getOptions().valueOf(OUTPUT_SAM2);
 	}
 	
 	public String getReference() {
