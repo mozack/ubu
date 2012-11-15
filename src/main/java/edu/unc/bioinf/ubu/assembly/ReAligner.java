@@ -1,10 +1,9 @@
 package edu.unc.bioinf.ubu.assembly;
 
-import static edu.unc.bioinf.ubu.assembly.OperatingSystemCommand.runCommand;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -14,7 +13,6 @@ import java.io.Reader;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +31,7 @@ import net.sf.samtools.SAMFileWriter;
 import net.sf.samtools.SAMFileWriterFactory;
 import net.sf.samtools.SAMRecord;
 import net.sf.samtools.SAMFileReader.ValidationStringency;
-import edu.unc.bioinf.ubu.chimera.CombineChimera;
+import edu.unc.bioinf.ubu.chimera.CombineChimera3;
 import edu.unc.bioinf.ubu.fastq.Sam2Fastq;
 import edu.unc.bioinf.ubu.gtf.Feature;
 import edu.unc.bioinf.ubu.gtf.GtfLoader;
@@ -47,7 +45,6 @@ public class ReAligner {
 	private static final int MIN_REGION_REMAINDER = 500;
 	private static final int REGION_OVERLAP = 200; 
 	private static final long RANDOM_SEED = 1;
-	private static final int MIN_CHIMERIC_READ_MAPQ = 2;
 	private static final int MAX_POTENTIAL_UNALIGNED_CONTIGS = 3000000;
 	
 	private int missingXATag = 0;
@@ -154,7 +151,7 @@ public class ReAligner {
 //			String finalUnaligned = unalignedDir + "/" + "unaligned_to_contig.bam";
 			
 			if (hasContigs) {
-				String unalignedCleanContigsFasta = alignAndCleanContigs(unalignedContigFasta, unalignedDir);
+				String unalignedCleanContigsFasta = alignAndCleanContigs(unalignedContigFasta, unalignedDir, false);
 				if (unalignedCleanContigsFasta != null) {
 					String alignedToContigSam = alignReads(unalignedDir, unalignedSam, unalignedCleanContigsFasta);
 					String alignedToContigBam = unalignedDir + "/" + "align_to_contig.bam";
@@ -193,7 +190,7 @@ public class ReAligner {
 		String contigFasta = tempDir + "/" + "all_contigs.fasta";
 		combineContigs(contigFasta);
 		
-		String cleanContigsFasta = alignAndCleanContigs(contigFasta, tempDir);
+		String cleanContigsFasta = alignAndCleanContigs(contigFasta, tempDir, true);
 		if (cleanContigsFasta != null) {
 			String tempDir1 = tempDir + "/temp1";
 			String tempDir2 = tempDir + "/temp2";
@@ -225,8 +222,22 @@ public class ReAligner {
 			sortBamsByName(bamsToSort, sortedOutput);
 			
 			log("Adjust reads");
-			adjustReads(sortedOriginalReads1, sortedAlignedToContig1, outputSam,
-					sortedOriginalReads2, sortedAlignedToContig2, outputSam2);
+			String adjustedOutput1 = tempDir1 + "/adjusted1.bam";
+			String adjustedOutput2 = tempDir2 + "/adjusted2.bam";
+			
+//			adjustReads(sortedOriginalReads1, sortedAlignedToContig1, outputSam,
+//					sortedOriginalReads2, sortedAlignedToContig2, outputSam2);
+			
+			adjustReads(sortedOriginalReads1, sortedAlignedToContig1, adjustedOutput1,
+					sortedOriginalReads2, sortedAlignedToContig2, adjustedOutput2);
+			
+			String sortedAdjusted1 = tempDir1 + "/sorted_adjusted1.bam";
+			String sortedAdjusted2 = tempDir2 + "/sorted_adjusted2.bam";
+			
+			sortBamsByCoordinate(adjustedOutput1, adjustedOutput2, sortedAdjusted1, sortedAdjusted2);
+		
+			log("Setting mismatches, edit distance and quality");
+			updateMismatchAndEditDistance(sortedAdjusted1, sortedAdjusted2, outputSam, outputSam2);
 			
 //			processContigs(tempDir, inputSam, outputSam, cleanContigsFasta);
 		}
@@ -234,6 +245,84 @@ public class ReAligner {
 		System.out.println("Multiple best hit reads missing XA tag: " + this.missingXATag);
 		
 		System.out.println("Done.");
+	}
+	
+	private void updateMismatchAndEditDistance(String in1, String in2, String out1, String out2) throws FileNotFoundException, IOException, InterruptedException {
+		if (numThreads > 1) {
+			UpdateMismatchAndEditDistanceRunnable runnable1 = new UpdateMismatchAndEditDistanceRunnable(in1, out1, this);
+			Thread thread1 = new Thread(runnable1);
+			thread1.start();
+			
+			UpdateMismatchAndEditDistanceRunnable runnable2 = new UpdateMismatchAndEditDistanceRunnable(in2, out2, this);
+			Thread thread2 = new Thread(runnable2);
+			thread2.start();
+			
+			thread1.join();
+			thread2.join();
+		} else {
+			updateMismatchAndEditDistance(in1, out1);
+			updateMismatchAndEditDistance(in2, out2);
+		}
+	}
+	
+	void updateMismatchAndEditDistance(String inputBam, String outputBam) throws FileNotFoundException, IOException {
+		
+		CompareToReference c2r = new CompareToReference();
+		c2r.init(this.reference);
+		
+		SAMFileReader reader = new SAMFileReader(new File(inputBam));
+		reader.setValidationStringency(ValidationStringency.SILENT);
+		
+		SAMFileWriter outputReadsBam = new SAMFileWriterFactory().makeSAMOrBAMWriter(
+				samHeader, true, new File(outputBam));
+		
+		for (SAMRecord read : reader) {
+			// Has this read been adjusted?
+			if (read.getAttribute("YO") != null) {
+				int numMismatches = c2r.numMismatches(read);				
+				int numIndelBases = getNumIndelBases(read);
+				read.setAttribute("XM", numMismatches);
+				read.setAttribute("NM", numMismatches + numIndelBases);
+				read.setMappingQuality(calcMappingQuality(read));
+				
+				//TODO - Calc as fraction of read length
+				if (numMismatches > 20) {
+					System.out.println("HIGH_MISMATCH: [" + read.getSAMString() + "]");
+				}
+			}
+			
+			outputReadsBam.addAlignment(read);
+		}
+		
+		reader.close();
+		outputReadsBam.close();
+	}
+	
+	//TODO: Add rhyme or reason to this
+	private int calcMappingQuality(SAMRecord read) {
+		int mapq = 0;
+		
+		if (read.getMappingQuality() > 0) {
+			int contigQuality = (Integer) read.getAttribute("YQ");
+			int quality = Math.min(contigQuality, 50);
+			int mismatchesToContig = (Integer) read.getAttribute("YM");
+			quality -= mismatchesToContig * 5;
+			mapq = Math.max(quality, 1);
+		}
+		
+		return mapq;
+	}
+	
+	private int getNumIndelBases(SAMRecord read) {
+		int numIndelBases = 0;
+		
+		for (CigarElement element : read.getCigar().getCigarElements()) {
+			if ((element.getOperator() == CigarOperator.D) || (element.getOperator() == CigarOperator.I)) {
+				numIndelBases += element.getLength();
+			}
+		}
+		
+		return numIndelBases;
 	}
 	
 	private void adjustReads(String sortedOriginalReads1, String sortedAlignedToContig1, String outputSam1, 
@@ -259,20 +348,20 @@ public class ReAligner {
 		}
 	}
 	
-	private String alignAndCleanContigs(String contigFasta, String tempDir) throws InterruptedException, IOException {
+	private String alignAndCleanContigs(String contigFasta, String tempDir, boolean shouldRemoveSoftClips) throws InterruptedException, IOException {
 		log("Aligning contigs");
 		Aligner aligner = new Aligner(reference, numThreads);
 		String contigsSam = tempDir + "/" + "all_contigs.sam";
 		aligner.align(contigFasta, contigsSam);
 		
 		log("Processing chimeric reads");
-		CombineChimera cc = new CombineChimera();
+		CombineChimera3 cc = new CombineChimera3();
 		String contigsWithChim = tempDir + "/" + "all_contigs_chim.sam";
-		cc.combine(contigsSam, contigsWithChim, MIN_CHIMERIC_READ_MAPQ);
+		cc.combine(contigsSam, contigsWithChim);
 		
 		log("Cleaning contigs");
 		String cleanContigsFasta = tempDir + "/" + "clean_contigs.fasta";
-		boolean hasCleanContigs = cleanAndOutputContigs(contigsWithChim, cleanContigsFasta);
+		boolean hasCleanContigs = cleanAndOutputContigs(contigsWithChim, cleanContigsFasta, shouldRemoveSoftClips);
 		
 		return hasCleanContigs ? cleanContigsFasta : null;
 	}
@@ -353,7 +442,34 @@ public class ReAligner {
 		}
 	}
 	
+	private void sortBams(String in1, String in2, String out1, String out2, String sortOrder) throws InterruptedException {
+		if (numThreads > 1) {
+			System.out.println("Sorting BAMs in parallel");
+			SortBamRunnable runnable1 = new SortBamRunnable(this, in1, out1, sortOrder);
+			Thread thread1 = new Thread(runnable1);
+			
+			SortBamRunnable runnable2 = new SortBamRunnable(this, in2, out2, sortOrder);
+			Thread thread2 = new Thread(runnable2);
+
+			thread1.start();
+			thread2.start();
+			
+			thread1.join();
+			thread2.join();
+		} else {
+			System.out.println("Sorting bams sequentially");
+			sortBam(in1, out1, sortOrder);
+			sortBam(in2, out2, sortOrder);
+		}
+	}
+		
+	private void sortBamsByCoordinate(String in1, String in2, String out1, String out2) throws InterruptedException {
+		sortBams(in1, in2, out1, out2, "coordinate");
+	}
+	
 	private void sortBamsByName(String in1, String in2, String out1, String out2) throws InterruptedException {
+		sortBams(in1, in2, out1, out2, "queryname");
+		/*
 		if (numThreads > 1) {
 			System.out.println("Sorting BAMs in parallel");
 			SortBamRunnable runnable1 = new SortBamRunnable(this, in1, out1, "queryname");
@@ -372,6 +488,7 @@ public class ReAligner {
 			sortBam(in1, out1, "queryname");
 			sortBam(in2, out2, "queryname");
 		}
+		*/
 	}
 	
 	void sortBam(String input, String output, String sortOrder) {
@@ -756,7 +873,7 @@ public class ReAligner {
 //		runCommand(cmd);
 //	}
 		
-	private boolean cleanAndOutputContigs(String contigsSam, String cleanContigsFasta) throws IOException {
+	private boolean cleanAndOutputContigs(String contigsSam, String cleanContigsFasta, boolean shouldRemoveSoftClips) throws IOException {
 		
 		boolean hasCleanContigs = false;
 		
@@ -769,7 +886,9 @@ public class ReAligner {
 			//TODO: Does this guarantee no alternate alignments?
 			if (contigRead.getMappingQuality() > 1) {
 				
-				removeSoftClips(contigRead);
+				if (shouldRemoveSoftClips) {
+					removeSoftClips(contigRead);
+				}
 				
 				String bases = contigRead.getReadString();
 				
@@ -1051,76 +1170,96 @@ public class ReAligner {
 						
 						contigRead = hitInfo.getRecord();
 						int position = hitInfo.getPosition() - 1;
-
-						List<ReadBlock> contigReadBlocks = ReadBlock.getReadBlocks(contigRead);
 						
-						ReadPosition readPosition = new ReadPosition(origRead, position, -1);
-						SAMRecord updatedRead = updateReadAlignment(contigRead,
-								contigReadBlocks, readPosition);
-						
-						if (updatedRead != null) {
-							//TODO: Move into updateReadAlignment ?
-							if (updatedRead.getMappingQuality() == 0) {
-								updatedRead.setMappingQuality(1);
-							}
+						// Only consider this mapping if the assembled contig's quality is
+						// greater than the original read's quality.
+						if (contigRead.getMappingQuality() > orig.getMappingQuality()) {
+	
+							List<ReadBlock> contigReadBlocks = ReadBlock.getReadBlocks(contigRead);
 							
-							if (updatedRead.getReadUnmappedFlag()) {
-								updatedRead.setReadUnmappedFlag(false);
-							}
+							ReadPosition readPosition = new ReadPosition(origRead, position, -1);
+							SAMRecord updatedRead = updateReadAlignment(contigRead,
+									contigReadBlocks, readPosition);
 							
-							updatedRead.setReadNegativeStrandFlag(hitInfo.isOnNegativeStrand());
-
-							// Set read bases to the aligned read (which will be expressed in 
-							// forward strand context according to the primary alignment).
-							// If this hit's strand is opposite the primary alignment, reverse the bases
-							if (hitInfo.isOnNegativeStrand() == read.getReadNegativeStrandFlag()) {
-								updatedRead.setReadString(read.getReadString());
-								updatedRead.setBaseQualityString(read.getBaseQualityString());
-							} else {
-								updatedRead.setReadString(reverseComplementor.reverseComplement(read.getReadString()));
-								updatedRead.setBaseQualityString(reverseComplementor.reverse(read.getBaseQualityString()));								
-							}
-							
-							// If the read's alignment info has been modified, record the original alignment.
-							if (origRead.getReadUnmappedFlag() ||
-								!origRead.getReferenceName().equals(updatedRead.getReferenceName()) ||
-								origRead.getAlignmentStart() != updatedRead.getAlignmentStart() ||
-								origRead.getReadNegativeStrandFlag() != updatedRead.getReadNegativeStrandFlag() ||
-								!origRead.getCigarString().equals(updatedRead.getCigarString())) {
-							
-								String originalAlignment;
-								if (origRead.getReadUnmappedFlag()) {
-									originalAlignment = "N/A";
-								} else {
-									originalAlignment = origRead.getReferenceName() + ":" + origRead.getAlignmentStart() + ":" +
-											(origRead.getReadNegativeStrandFlag() ? "-" : "+") + ":" + origRead.getCigarString();
+							if (updatedRead != null) {
+								//TODO: Move into updateReadAlignment ?
+								if (updatedRead.getMappingQuality() == 0) {
+									updatedRead.setMappingQuality(1);
 								}
 								
-								// Read's original alignment position
-								updatedRead.setAttribute("YO", originalAlignment);
-							}
-							
-							// Mismatches to the contig
-							updatedRead.setAttribute("YM", hitInfo.getNumMismatches());
-							
-							// Contig's mapping quality
-							updatedRead.setAttribute("YC", hitInfo.getRecord().getMappingQuality());
-														
-							// Check to see if this read has been output with the same alignment already.
-							String readAlignmentInfo = updatedRead.getReferenceName() + "_" + updatedRead.getAlignmentStart() + "_" +
-									(updatedRead.getReadNegativeStrandFlag() ? "-" : "+") + "_" + updatedRead.getCigarString();
-							
-							if (!outputReadAlignmentInfo.containsKey(readAlignmentInfo)) {
-								outputReadAlignmentInfo.put(readAlignmentInfo, updatedRead);
+								if (updatedRead.getReadUnmappedFlag()) {
+									updatedRead.setReadUnmappedFlag(false);
+								}
+								
+								updatedRead.setReadNegativeStrandFlag(hitInfo.isOnNegativeStrand());
+	
+								// Set read bases to the aligned read (which will be expressed in 
+								// forward strand context according to the primary alignment).
+								// If this hit's strand is opposite the primary alignment, reverse the bases
+								if (hitInfo.isOnNegativeStrand() == read.getReadNegativeStrandFlag()) {
+									updatedRead.setReadString(read.getReadString());
+									updatedRead.setBaseQualityString(read.getBaseQualityString());
+								} else {
+									updatedRead.setReadString(reverseComplementor.reverseComplement(read.getReadString()));
+									updatedRead.setBaseQualityString(reverseComplementor.reverse(read.getBaseQualityString()));								
+								}
+								
+								// If the read's alignment info has been modified, record the original alignment.
+								if (origRead.getReadUnmappedFlag() ||
+									!origRead.getReferenceName().equals(updatedRead.getReferenceName()) ||
+									origRead.getAlignmentStart() != updatedRead.getAlignmentStart() ||
+									origRead.getReadNegativeStrandFlag() != updatedRead.getReadNegativeStrandFlag() ||
+									!origRead.getCigarString().equals(updatedRead.getCigarString())) {
+								
+									String originalAlignment;
+									if (origRead.getReadUnmappedFlag()) {
+										originalAlignment = "N/A";
+									} else {
+										originalAlignment = origRead.getReferenceName() + ":" + origRead.getAlignmentStart() + ":" +
+												(origRead.getReadNegativeStrandFlag() ? "-" : "+") + ":" + origRead.getCigarString();
+									}
+									
+									// Read's original alignment position
+									updatedRead.setAttribute("YO", originalAlignment);
+								}
+								
+								// Mismatches to the contig
+								updatedRead.setAttribute("YM", hitInfo.getNumMismatches());
+								
+								// Contig's mapping quality
+								updatedRead.setAttribute("YQ", hitInfo.getRecord().getMappingQuality());
+															
+								// Check to see if this read has been output with the same alignment already.
+								String readAlignmentInfo = updatedRead.getReferenceName() + "_" + updatedRead.getAlignmentStart() + "_" +
+										(updatedRead.getReadNegativeStrandFlag() ? "-" : "+") + "_" + updatedRead.getCigarString();
+								
+								if (!outputReadAlignmentInfo.containsKey(readAlignmentInfo)) {
+									outputReadAlignmentInfo.put(readAlignmentInfo, updatedRead);
+								}
 							}
 						}
 					}
 					
 					for (SAMRecord readToOutput : outputReadAlignmentInfo.values()) {
 						
+						int origBestHits = this.getIntAttribute(readToOutput, "X0");
+						int origSuboptimalHits = this.getIntAttribute(readToOutput, "X1");
+						
 						// If the read mapped to multiple locations, set mapping quality to zero.
 						if ((outputReadAlignmentInfo.size() > 1) || (totalHits > 1000)) {
 							readToOutput.setMappingQuality(0);
+						}
+						
+						if (readToOutput.getAttribute("YO") != null) {
+							readToOutput.setAttribute("X0", outputReadAlignmentInfo.size());
+							readToOutput.setAttribute("X1", origBestHits + origSuboptimalHits);
+							
+							// Clear various tags
+							readToOutput.setAttribute("XO", null);
+							readToOutput.setAttribute("XG", null);
+							readToOutput.setAttribute("MD", null);
+							readToOutput.setAttribute("XA", null);
+							readToOutput.setAttribute("XT", null);
 						}
 
 						outputReadsBam.addAlignment(readToOutput);
@@ -1447,7 +1586,7 @@ public class ReAligner {
 */
 	
 	public static void main(String[] args) throws Exception {
-		System.out.println("0.1");
+		System.out.println("0.2");
 		ReAligner realigner = new ReAligner();
 
 		long s = System.currentTimeMillis();
@@ -1513,6 +1652,7 @@ public class ReAligner {
 		String tempDir = "/home/lmose/dev/ayc/sim/s339/chr19_working";
 		*/
 		
+		/*
 		String input = "/home/lmose/dev/ayc/sim/s339/empty.bam";
 		//String input2 = "/home/lmose/dev/ayc/sim/s339/7455_sorted.bam";
 		String input2 = "/home/lmose/dev/ayc/sim/s87/sorted_1903.bam";
@@ -1521,8 +1661,24 @@ public class ReAligner {
 		String reference = "/home/lmose/reference/chr11/chr11.fa";
 		String regions = "/home/lmose/dev/ayc/regions/clinseq5/1903.gtf";
 		String tempDir = "/home/lmose/dev/ayc/sim/s87/1903_working";
+*/
+//		String input = "/home/lmose/dev/ayc/sim/s339/empty.bam";
+//		String input2 = "/home/lmose/dev/ayc/sim/s411/sorted_9041.bam";
+//		String output = "/home/lmose/dev/ayc/sim/s411/empty_realigned.bam";
+//		String output2 = "/home/lmose/dev/ayc/sim/s411/9041_realigned.bam";
+//		String reference = "/home/lmose/reference/chr21/chr21.fa";
+//		String regions = "/home/lmose/dev/ayc/regions/clinseq5/9041.gtf";
+//		String tempDir = "/home/lmose/dev/ayc/sim/s411/9041_working";
 
+		String input = "/home/lmose/dev/ayc/sim/s339/empty.bam";
+		String input2 = "/home/lmose/dev/ayc/sim/s411/sorted_small.bam";
+		String output = "/home/lmose/dev/ayc/sim/s411/empty_realigned.bam";
+		String output2 = "/home/lmose/dev/ayc/sim/s411/small_realigned.bam";
+		String reference = "/home/lmose/reference/chr21/chr21.fa";
+		String regions = "/home/lmose/dev/ayc/regions/clinseq5/9041.gtf";
+		String tempDir = "/home/lmose/dev/ayc/sim/s411/small_working";
 
+		
 		/*
 		String input = "/home/lmose/dev/ayc/sim/38/sorted_tiny.bam";
 		String output = "/home/lmose/dev/ayc/sim/38/realigned.bam";
@@ -1568,7 +1724,7 @@ public class ReAligner {
 		settings.setKmerSize(63);
 		settings.setMinContigLength(100);
 		settings.setMinEdgeFrequency(2);
-		settings.setMinNodeFrequncy(2);
+		settings.setMinNodeFrequncy(3);
 		settings.setMinEdgeRatio(.05);
 		settings.setMaxPotentialContigs(30000);
 		settings.setMinContigRatio(.3);
