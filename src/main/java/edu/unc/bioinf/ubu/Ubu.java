@@ -35,6 +35,11 @@ public class Ubu {
 		if (args.length == 0) {
 			printAvailablePrograms();
 		} else {
+			
+			System.out.println("Java version: " + System.getProperty("java.version"));
+			System.out.println("Max memory: " + Runtime.getRuntime().maxMemory());
+			System.out.println("Total memory: " + Runtime.getRuntime().totalMemory());
+			System.out.println("Free memory: " + Runtime.getRuntime().freeMemory());
 		
 			String cmd = args[0];
 			
