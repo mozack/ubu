@@ -106,7 +106,16 @@ public class SamReadPairReader implements Iterable<ReadPair> {
     }
     
     private String getBaseName(SAMRecord read) {
-        return read.getReadName().substring(0, read.getReadName().length()-2);
+    	String baseName;
+    	
+    	int idx = read.getReadName().indexOf('/');
+    	if (idx > -1) {
+    		baseName = read.getReadName().substring(0, idx);
+    	} else {
+    		baseName = read.getReadName();
+    	}
+    	
+        return baseName;
     }
     
     private ReadPair getNextReadPair() {
@@ -235,7 +244,8 @@ public class SamReadPairReader implements Iterable<ReadPair> {
     }
     
     public static void main(String[] args) {
-        SamReadPairReader reader = new SamReadPairReader("/home/lisle/data/coord_convert/sorted_tiny.sam");
+//        SamReadPairReader reader = new SamReadPairReader("/home/lisle/data/coord_convert/sorted_tiny.sam");
+    	SamReadPairReader reader = new SamReadPairReader("/home/lmose/Downloads/ucsd/debug.bam");
         
         for (ReadPair pair : reader) {
             System.out.println(pair);
