@@ -17,7 +17,7 @@
   <repositories>
     <repository>
       <id>UBU repository</id>
-      <url>http://lbg.unc.edu/~lmose/maven-repo</url>
+      <url>http://www.unc.edu/~lmose/maven-repo</url>
     </repository>
   </repositories>
 
