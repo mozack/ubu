@@ -15,6 +15,10 @@ public class FastqSplitter {
 	    FastqOutputFile out1 = new FastqOutputFile();
 	    FastqOutputFile out2 = new FastqOutputFile();
 	    
+	    in.init(input);
+	    out1.init(output1);
+	    out2.init(output2);
+	    
 	    FastqRecord rec = in.getNextRecord();
 	    
 	    while (rec != null) {

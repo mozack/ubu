@@ -46,7 +46,7 @@ public class FastqSplitterOptions extends Options {
         
         if (!getOptions().hasArgument(OUTPUT2)) {
             isValid = false;
-            System.err.println("Missing required output FASTQ file 1");
+            System.err.println("Missing required output FASTQ file 2");
         }
         
         if (!isValid) {
