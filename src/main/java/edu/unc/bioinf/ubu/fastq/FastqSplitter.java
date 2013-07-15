@@ -35,6 +35,8 @@ public class FastqSplitter {
 	    	String qualities2 = rec.getQuality().substring(len/2, len);
 	    	FastqRecord outRec2 = new FastqRecord(id2, bases2, qualities2);
 	    	out2.write(outRec2);
+	    	
+	    	rec = in.getNextRecord();
 	    }
 	    
 	    in.close();
