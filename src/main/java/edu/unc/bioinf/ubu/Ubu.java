@@ -84,6 +84,7 @@ public class Ubu {
 		printProgram(getPaddedString(JUNC), "Count splice junctions in a SAM or BAM file");
 		printProgram(getPaddedString(SAM2FASTQ), "Convert SAM/BAM file to FASTQ");
 		printProgram(getPaddedString(FASTQ_FORMAT), "Format a single FASTQ file (clean up read ids and/or convert quality scoring)");
+		printProgram(getPaddedString(FASTQ_FORMAT), "Split a single FASTQ file containing concatenated paired end reads into 2 FASTQ files");
 //		printProgram(getPaddedString(REALIGN), "");
 	}
 	
