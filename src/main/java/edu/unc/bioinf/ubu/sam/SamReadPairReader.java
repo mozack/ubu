@@ -104,10 +104,25 @@ public class SamReadPairReader implements Iterable<ReadPair> {
         	}
         }
     }
-    
+
+    private String getBaseName(SAMRecord read) {
+    	String baseName;
+    	
+    	int idx = read.getReadName().indexOf('/');
+    	if (idx > -1) {
+    		baseName = read.getReadName().substring(0, idx);
+    	} else {
+    		baseName = read.getReadName();
+    	}
+    	
+        return baseName;
+    }
+
+/*   
     private String getBaseName(SAMRecord read) {
         return read.getReadName().substring(0, read.getReadName().length()-2);
     }
+*/
     
     private ReadPair getNextReadPair() {
         
